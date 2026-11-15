@@ -217,7 +217,67 @@ $("loginForm").onsubmit=async e=>{
 };
 
 $("createOrgForm").onsubmit=async e=>{e.preventDefault();const message=$("createOrgMessage"),button=e.currentTarget.querySelector("button[type='submit']");button.disabled=true;try{const {error}=await supabase.rpc("create_organization",{p_name:$("newOrgName").value.trim(),p_slug:$("newOrgSlug").value.trim().toLowerCase().replace(/\s+/g,"-")});if(error)throw error;message.textContent="Lembaga berhasil ditambahkan.";e.currentTarget.reset();await loadOrganizations();await loadPublicOrganizations();}catch(err){message.textContent="Gagal: "+err.message;}finally{button.disabled=false;}};
-$("createAdminForm").onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector("button[type='submit']"),message=$("createAdminMessage");button.disabled=true;try{const {data,error}=await supabase.functions.invoke("admin-create-user",{body:{full_name:$("adminName").value.trim(),email:$("adminEmail").value.trim().toLowerCase(),password:$("adminPassword").value,organization_id:$("adminOrganization").value}});if(error)throw error;if(!data?.success)throw new Error(data?.error||"Gagal membuat akun admin.");message.textContent="Akun admin berhasil dibuat.";form.reset();}catch(err){message.textContent="Gagal: "+err.message;}finally{button.disabled=false;}};
+
+$("createAdminForm").onsubmit = async (e) => {
+  e.preventDefault();
+
+  const form = e.currentTarget;
+  const button = form.querySelector("button[type='submit']");
+  const message = $("createAdminMessage");
+
+  button.disabled = true;
+
+  try {
+    // Pastikan sesi Super Admin tersedia
+    const {
+      data: { session },
+      error: sessionError
+    } = await supabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    if (!session?.access_token) {
+      throw new Error(
+        "Sesi Super Admin tidak ditemukan. Silakan login kembali."
+      );
+    }
+
+    // Kirim access token ke Edge Function
+    const { data, error } =
+      await supabase.functions.invoke("admin-create-user", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: {
+          full_name: $("adminName").value.trim(),
+          email: $("adminEmail").value.trim().toLowerCase(),
+          password: $("adminPassword").value,
+          organization_id: $("adminOrganization").value
+        }
+      });
+
+    if (error) throw error;
+
+    if (!data?.success) {
+      throw new Error(
+        data?.error || "Gagal membuat akun admin."
+      );
+    }
+
+    message.textContent =
+      "Akun Admin lembaga berhasil dibuat.";
+
+    form.reset();
+
+  } catch (err) {
+    console.error("Create Admin Error:", err);
+    message.textContent = "Gagal: " + err.message;
+
+  } finally {
+    button.disabled = false;
+  }
+};
+
 
 const view=$("adminView"),viewTitle=$("adminViewTitle"),viewMessage=$("adminViewMessage");
 function showView(title,html){viewTitle.textContent=title;viewMessage.innerHTML=html;view.classList.remove("hidden");view.scrollIntoView({behavior:"smooth",block:"start"});}
