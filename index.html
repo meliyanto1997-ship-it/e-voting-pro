@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#07111f">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>E-VOTING</title>
+    <link rel="stylesheet" href="./assets/css/app.css">
+</head>
+
+<body>
+    <header class="topbar"><a class="brand"><span class="mark">◈</span><span><b>E-VOTING</b><small>PEMILIHAN DIGITAL</small></span></a>
+        <div class="actions"><span id="clock"></span><button id="themeBtn" class="ghost">☀ / ☾</button><button
+                id="loginBtn" class="primary">Login Admin</button></div>
+    </header>
+    <main class="wrap">
+        <section class="hero">
+            <div class="eyebrow">MULTI-INSTITUTION • SECURE • REALTIME</div>
+            <h1>Demokrasi Digital<br><em>Dalam Satu Platform.</em></h1>
+            <p>Platform pemungutan suara digital untuk yayasan, madrasah, sekolah, dan organisasi.</p>
+            <div class="status"><i></i><span id="connectionState">Menyiapkan aplikasi</span><b>@Mr.Mey</b></div>
+        </section>
+        <div class="heading">
+            <div>
+                <div class="eyebrow">PILIH LEMBAGA</div>
+                <h2>Portal Pemilihan</h2>
+            </div><span class="chip">MULTI-LEMBAGA</span>
+        </div>
+        <section id="orgGrid" class="grid"></section>
+        <div class="heading">
+            <div>
+                <div class="eyebrow">CONTROL CENTER</div>
+                <h2>Panel Administrator</h2>
+            </div>
+        </div>
+        <section class="panel" id="adminPanel">
+            <h3>Kelola pemilihan secara terpusat</h3>
+            <p>Masuk sebagai Super Admin atau Admin Lembaga untuk mengelola data sesuai kewenangan.</p>
+            <div class="features">
+                <div><strong>01</strong><b>Super Admin</b><small>Kelola lembaga dan administrator.</small></div>
+                <div><strong>02</strong><b>Administrasi</b><small>Atur pemilihan, kandidat, dan token.</small></div>
+                <div><strong>03</strong><b>Hasil & Arsip</b><small>Grafik, laporan, dan jejak audit.</small></div>
+            </div>
+            <div id="superAdminTools" class="hidden">
+    <div class="org">
+        <h3>Tambah Lembaga Baru</h3>
+
+        <form id="createOrgForm">
+            <label>Nama Lembaga</label>
+            <input
+                id="newOrgName"
+                type="text"
+                placeholder="Contoh: RA Darul Falah"
+                required
+            >
+
+            <label>Kode Lembaga</label>
+            <input
+                id="newOrgSlug"
+                type="text"
+                placeholder="Contoh: ra-darul-falah"
+                required
+            >
+
+            <button type="submit" class="primary">
+                Tambah Lembaga
+            </button>
+
+            <p id="createOrgMessage"></p>
+        </form>
+    </div>
+
+<div class="org">
+    <h3>Buat Akun Admin Lembaga</h3>
+
+    <form id="createAdminForm">
+        <label>Nama Lengkap Admin</label>
+        <input
+            id="adminName"
+            type="text"
+            placeholder="Masukkan nama lengkap"
+            required
+        >
+
+        <label>Email Admin</label>
+        <input
+            id="adminEmail"
+            type="email"
+            placeholder="admin@contoh.com"
+            required
+        >
+
+        <label>Password Admin</label>
+        <input
+            id="adminPassword"
+            type="password"
+            minlength="8"
+            placeholder="Minimal 8 karakter"
+            required
+        >
+
+        <label>Pilih Lembaga</label>
+        <select id="adminOrganization" required>
+            <option value="">Memuat daftar lembaga...</option>
+        </select>
+
+        <button type="submit" class="primary">
+            Buat Akun Admin
+        </button>
+
+        <p id="createAdminMessage"></p>
+    </form>
+</div>
+</div>
+<div id="orgAdminTools" class="hidden">
+    <div class="org">
+        <h3>Dashboard Admin Lembaga</h3>
+        <p id="orgAdminWelcome">Selamat datang, Admin Lembaga.</p>
+    </div>
+
+<div class="grid">
+    <button type="button" class="org menu-card" data-view="elections">
+        <h3>Data Pemilihan</h3>
+        <p>Kelola pemilihan di lembaga Anda.</p>
+    </button>
+
+    <button type="button" class="org menu-card" data-view="candidates">
+        <h3>Data Kandidat</h3>
+        <p>Kelola kandidat pemilihan.</p>
+    </button>
+
+    <button type="button" class="org menu-card" data-view="tokens">
+        <h3>Token Pemilih</h3>
+        <p>Kelola token pemilih.</p>
+    </button>
+
+    <button type="button" class="org menu-card" data-view="results">
+        <h3>Hasil Pemilihan</h3>
+        <p>Lihat hasil dan laporan pemilihan.</p>
+    </button>
+</div>
+</div>
+
+<div id="adminView" class="org hidden">
+    <button type="button" id="backToDashboard">← Kembali ke Dashboard</button>
+    <h3 id="adminViewTitle"></h3>
+    <p id="adminViewMessage"></p>
+</div>
+
+<div id="organizationList"></div>
+        </section>
+        <footer>© <span id="year"></span> E-VOTING • <b>@Mr.Mey</b></footer>
+    </main>
+    <div id="loginModal" class="modal hidden">
+        <form id="loginForm" class="modalbox"><button type="button" id="closeLogin" class="close">×</button>
+            <div class="eyebrow">ADMIN AUTHENTICATION</div>
+            <h2>Login Administrator</h2><label>Email</label><input id="email" type="email"
+                required><label>Password</label><input id="password" type="password" required><button
+                class="primary full">Masuk</button>
+            <p id="loginMessage">Konfigurasi Supabase diperlukan sebelum login diaktifkan.</p>
+        </form>
+    </div>
+    <script type="module" src="./assets/js/app.js"></script>
+</body>
+
+</html>
