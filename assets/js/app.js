@@ -148,36 +148,76 @@ if(configured){loadPublicOrganizations();testConnection();}
 
 async function loadOrganizations(){
   const list=$("organizationList"), dropdown=$("adminOrganization");
-  try{const {data,error}=await supabase.rpc("list_organizations");if(error)throw error;
-    if(list){list.replaceChildren();(data||[]).forEach(org=>{
-      const el=document.createElement("article");el.className="org v21-org-card";
-      const status=String(org.organization_status||"inactive").toLowerCase();
-      el.innerHTML=`<h3>${esc(org.organization_name)}</h3><p>Kode: ${esc(org.organization_slug)}</p><strong class="v21-org-status">STATUS: ${esc(status.toUpperCase())}</strong><div class="v21-actions"><button type="button" class="ghost v21-toggle-org">${status==="active"?"Nonaktifkan":"Aktifkan"} Lembaga</button><button type="button" class="ghost v21-reset-org">Reset Lembaga</button><button type="button" class="v21-delete-org danger">Hapus Permanen</button></div><p class="v21-org-message" role="status"></p>`;
-      const msg=el.querySelector(".v21-org-message");
-      el.querySelector(".v21-toggle-org").addEventListener("click",async()=>{
-        const next=status==="active"?"inactive":"active";
-        if(!confirm(`Ubah status ${org.organization_name} menjadi ${next.toUpperCase()}?`))return;
-        try{const {error}=await supabase.rpc("set_organization_status",{p_org_id:org.organization_id,p_status:next});if(error)throw error;msg.textContent=`Status lembaga berhasil diubah menjadi ${next}.`;await loadOrganizations();await loadPublicOrganizations();}
-        catch(err){msg.textContent="Gagal mengubah status: "+err.message;}
+  try{
+    const {data,error}=await supabase.rpc("list_organizations");
+    if(error)throw error;
+    if(list){
+      list.replaceChildren();
+      (data||[]).forEach(org=>{
+        const el=document.createElement("article");
+        el.className="org v21-org-card";
+        const status=String(org.organization_status||"inactive").toLowerCase();
+        el.innerHTML=`<h3>${esc(org.organization_name)}</h3><p>Kode: ${esc(org.organization_slug)}</p>
+          <strong class="v21-org-status">STATUS: ${esc(status.toUpperCase())}</strong>
+          <div class="v21-actions">
+            <button type="button" class="ghost v21-toggle-org">${status==="active"?"Nonaktifkan":"Aktifkan"} Lembaga</button>
+            <button type="button" class="ghost v21-reset-org">Reset Lembaga</button>
+            <button type="button" class="v21-delete-org danger">Hapus Permanen</button>
+          </div><p class="v21-org-message" role="status"></p>`;
+        const msg=el.querySelector(".v21-org-message");
+        const toggle=el.querySelector(".v21-toggle-org");
+        const reset=el.querySelector(".v21-reset-org");
+        const del=el.querySelector(".v21-delete-org");
+        toggle.onclick=async ev=>{
+          ev.preventDefault();ev.stopPropagation();
+          const next=status==="active"?"inactive":"active";
+          if(!confirm(`Ubah status ${org.organization_name} menjadi ${next.toUpperCase()}?`))return;
+          toggle.disabled=true;msg.textContent="Memproses perubahan status…";
+          try{
+            const {error}=await supabase.rpc("set_organization_status",{p_org_id:org.organization_id,p_status:next});
+            if(error)throw error;
+            msg.textContent="Status lembaga berhasil diubah.";
+            await loadOrganizations();await loadPublicOrganizations();
+          }catch(err){msg.textContent="Gagal mengubah status: "+(err.message||err);}
+          finally{toggle.disabled=false;}
+        };
+        reset.onclick=async ev=>{
+          ev.preventDefault();ev.stopPropagation();
+          const answer=prompt(`Reset seluruh data pemilihan ${org.organization_name}? Akun admin dan identitas lembaga dipertahankan. Ketik: RESET LEMBAGA`);
+          if(answer!=="RESET LEMBAGA")return;
+          reset.disabled=true;msg.textContent="Memproses reset…";
+          try{
+            const {error}=await supabase.rpc("organization_lifecycle_db",{p_org_id:org.organization_id,p_action:"reset",p_confirmation:answer});
+            if(error)throw error;
+            msg.textContent="Reset lembaga berhasil.";
+            if(currentOrgId===org.organization_id){activeElectionId="";activeElectionStatus="";}
+            await loadOrganizations();await loadPublicOrganizations();
+          }catch(err){msg.textContent="Reset gagal: "+(err.message||err);}
+          finally{reset.disabled=false;}
+        };
+        del.onclick=async ev=>{
+          ev.preventDefault();ev.stopPropagation();
+          const answer=prompt(`Hapus permanen lembaga ${org.organization_name}? Tindakan ini tidak dapat dibatalkan. Ketik: HAPUS PERMANEN`);
+          if(answer!=="HAPUS PERMANEN")return;
+          del.disabled=true;msg.textContent="Memproses penghapusan…";
+          try{
+            const {error}=await supabase.rpc("organization_lifecycle_db",{p_org_id:org.organization_id,p_action:"delete",p_confirmation:answer});
+            if(error)throw error;
+            msg.textContent="Lembaga berhasil dihapus permanen.";
+            if(currentOrgId===org.organization_id){currentOrgId=null;activeElectionId="";activeElectionStatus="";}
+            await loadOrganizations();await loadPublicOrganizations();
+          }catch(err){msg.textContent="Penghapusan gagal: "+(err.message||err);}
+          finally{del.disabled=false;}
+        };
+        list.append(el);
       });
-      el.querySelector(".v21-reset-org").addEventListener("click",async()=>{
-        const answer=prompt(`RESET SELURUH DATA PEMILIHAN untuk ${org.organization_name}? Data lembaga, pengaturan, dan akun admin dipertahankan. Ketik: RESET LEMBAGA`);
-        if(answer!=="RESET LEMBAGA")return;
-        try{const {error}=await supabase.rpc("reset_organization_data",{p_org_id:org.organization_id,p_confirmation:answer});if(error)throw error;msg.textContent="Data pemilihan lembaga berhasil direset.";if(currentOrgId===org.organization_id){activeElectionId="";activeElectionStatus="";const staleSelect=$("v21ElectionSelect");if(staleSelect)staleSelect.replaceChildren(new Option("Belum ada pemilihan",""));}await loadOrganizations();await loadPublicOrganizations();}
-        catch(err){msg.textContent="Reset gagal: "+err.message;}
-      });
-      el.querySelector(".v21-delete-org").addEventListener("click",async()=>{
-        const answer=prompt(`PERINGATAN: Hapus permanen ${org.organization_name} beserta pemilihan, kandidat, token, dan keanggotaan admin. Akun autentikasi tidak dihapus. Ketik: HAPUS PERMANEN`);
-        if(answer!=="HAPUS PERMANEN")return;
-        try{const {error}=await supabase.rpc("delete_organization_safe",{p_org_id:org.organization_id,p_confirmation:answer});if(error)throw error;msg.textContent="Lembaga berhasil dihapus permanen.";await loadOrganizations();await loadPublicOrganizations();}
-        catch(err){msg.textContent="Penghapusan gagal: "+err.message;}
-      });
-      list.append(el);
-    });}
-    if(dropdown){dropdown.innerHTML='<option value="">Pilih lembaga…</option>';(data||[]).forEach(org=>{const op=document.createElement("option");op.value=org.organization_id;op.textContent=org.organization_name;dropdown.append(op);});}
-  }catch(e){if(list)list.textContent="Gagal memuat lembaga: "+e.message;}
+    }
+    if(dropdown){
+      dropdown.innerHTML='<option value="">Pilih lembaga…</option>';
+      (data||[]).forEach(org=>{const op=document.createElement("option");op.value=org.organization_id;op.textContent=org.organization_name;dropdown.append(op);});
+    }
+  }catch(e){if(list)list.textContent="Gagal memuat lembaga: "+(e.message||e);}
 }
-
 
 async function renderInstitutionBranding(){
   let panel=$("institutionBranding");
@@ -617,7 +657,7 @@ async function openResults(){
       <div class="ev-report-panel ev-analytics-page">
         <div class="ev-election-heading"><div><span class="ev-kicker">ROBOTIC ANALYTICS · TAHAP 5</span><h2>Pengesahan & Arsip Pemilihan</h2><p>Periksa hasil, kunci hasil resmi, dan siapkan berita acara.</p></div></div>
         ${electionSelect(rows)}
-        <div class="ev-report-toolbar"><button id="loadResults" type="button" class="primary">↻ Perbarui Hasil</button><span id="resultUpdated" class="ev-muted">Belum diperbarui</span></div>
+        <div class="ev-report-toolbar"><button id="loadResults" class="primary">↻ Perbarui Hasil</button><span id="resultUpdated" class="ev-muted">Belum diperbarui</span></div>
         <div id="resultOutput"><div class="ev-empty">Pilih pemilihan lalu tekan Perbarui Hasil.</div></div>
       </div>`);
     const sel=$("moduleElection");if(activeElectionId)sel.value=activeElectionId;
@@ -632,14 +672,16 @@ async function openResults(){
       if(electionError)throw electionError;
       if(!election)throw new Error("Data pemilihan tidak ditemukan atau tidak dapat diakses.");
       latestElection=election;latestLocked=Boolean(election.results_locked);
-      const {data:result,error}=await supabase.rpc("get_election_results",{p_election_id:activeElectionId});
+      let result,error;
+      ({data:result,error}=await supabase.rpc("get_election_results",{p_election_id:activeElectionId}));
+      if(error)({data:result,error}=await supabase.rpc("get_vote_results",{p_election_id:activeElectionId}));
       if(error)throw error;
       const normalized=Array.isArray(result)?result:(result?.results||result?.data||[]);
       if(!Array.isArray(normalized))throw new Error("Format hasil dari RPC tidak dikenali.");
       const records=normalized.map(r=>({
         nomor:r.candidate_number??r.number??"",
         kandidat:r.candidate_name??r.name??"",
-        suara:Number(r.vote_count??r.votes??r.total_votes??0)
+        suara:Number(r.total_votes??r.vote_count??r.votes??0)
       })).sort((a,b)=>b.suara-a.suara||String(a.kandidat).localeCompare(String(b.kandidat),"id"));
       const total=records.reduce((n,r)=>n+r.suara,0);
       latestRecords=records;latestTotal=total;
@@ -1473,4 +1515,14 @@ async function renderV21Controls(){
     @media(max-width:650px){.v21-actions{display:grid;grid-template-columns:1fr}.v21-actions button{width:100%}}
   `;
   document.head.append(style);
+})();
+
+/* FIX SUPER ADMIN: pastikan kartu dan tombol pengelolaan lembaga dapat menerima klik */
+(function(){
+ const style=document.createElement("style");
+ style.textContent=`#organizationList,.v21-org-card,.v21-org-card *{pointer-events:auto!important}
+ .v21-org-card{position:relative!important;z-index:20!important}
+ .v21-org-card .v21-actions{position:relative!important;z-index:25!important}
+ .v21-org-card .v21-actions button{position:relative!important;z-index:26!important;cursor:pointer!important}`;
+ document.head.appendChild(style);
 })();
