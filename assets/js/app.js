@@ -217,67 +217,7 @@ $("loginForm").onsubmit=async e=>{
 };
 
 $("createOrgForm").onsubmit=async e=>{e.preventDefault();const message=$("createOrgMessage"),button=e.currentTarget.querySelector("button[type='submit']");button.disabled=true;try{const {error}=await supabase.rpc("create_organization",{p_name:$("newOrgName").value.trim(),p_slug:$("newOrgSlug").value.trim().toLowerCase().replace(/\s+/g,"-")});if(error)throw error;message.textContent="Lembaga berhasil ditambahkan.";e.currentTarget.reset();await loadOrganizations();await loadPublicOrganizations();}catch(err){message.textContent="Gagal: "+err.message;}finally{button.disabled=false;}};
-
-$("createAdminForm").onsubmit = async (e) => {
-  e.preventDefault();
-
-  const form = e.currentTarget;
-  const button = form.querySelector("button[type='submit']");
-  const message = $("createAdminMessage");
-
-  button.disabled = true;
-
-  try {
-    // Pastikan sesi Super Admin tersedia
-    const {
-      data: { session },
-      error: sessionError
-    } = await supabase.auth.getSession();
-
-    if (sessionError) throw sessionError;
-
-    if (!session?.access_token) {
-      throw new Error(
-        "Sesi Super Admin tidak ditemukan. Silakan login kembali."
-      );
-    }
-
-    // Kirim access token ke Edge Function
-    const { data, error } =
-      await supabase.functions.invoke("admin-create-user", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: {
-          full_name: $("adminName").value.trim(),
-          email: $("adminEmail").value.trim().toLowerCase(),
-          password: $("adminPassword").value,
-          organization_id: $("adminOrganization").value
-        }
-      });
-
-    if (error) throw error;
-
-    if (!data?.success) {
-      throw new Error(
-        data?.error || "Gagal membuat akun admin."
-      );
-    }
-
-    message.textContent =
-      "Akun Admin lembaga berhasil dibuat.";
-
-    form.reset();
-
-  } catch (err) {
-    console.error("Create Admin Error:", err);
-    message.textContent = "Gagal: " + err.message;
-
-  } finally {
-    button.disabled = false;
-  }
-};
-
+$("createAdminForm").onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector("button[type='submit']"),message=$("createAdminMessage");button.disabled=true;try{const {data,error}=await supabase.functions.invoke("admin-create-user",{body:{full_name:$("adminName").value.trim(),email:$("adminEmail").value.trim().toLowerCase(),password:$("adminPassword").value,organization_id:$("adminOrganization").value}});if(error)throw error;if(!data?.success)throw new Error(data?.error||"Gagal membuat akun admin.");message.textContent="Akun admin berhasil dibuat.";form.reset();}catch(err){message.textContent="Gagal: "+err.message;}finally{button.disabled=false;}};
 
 const view=$("adminView"),viewTitle=$("adminViewTitle"),viewMessage=$("adminViewMessage");
 function showView(title,html){viewTitle.textContent=title;viewMessage.innerHTML=html;view.classList.remove("hidden");view.scrollIntoView({behavior:"smooth",block:"start"});}
@@ -729,15 +669,31 @@ async function openResults(){
       if(lockBtn)lockBtn.onclick=async()=>{
         if(!confirm("Kunci hasil pemilihan ini? Pastikan pemungutan suara telah selesai. Setelah dikunci, suara baru akan ditolak oleh sistem."))return;
         lockBtn.disabled=true;lockBtn.textContent="Mengunci…";
-        try{const {error}=await supabase.rpc("lock_election_results",{p_election_id:activeElectionId});if(error)throw error;await refreshResults();}
-        catch(err){alert("Gagal mengunci hasil: "+err.message);lockBtn.disabled=false;lockBtn.textContent="🔒 Kunci Hasil Resmi";}
+        const electionId=activeElectionId;
+        try{
+          const {error}=await supabase.rpc("lock_election_results",{p_election_id:electionId});
+          if(error)throw error;
+          const {data,error:verifyError}=await supabase.from("elections").select("results_locked").eq("id",electionId).single();
+          if(verifyError)throw verifyError;
+          if(data?.results_locked!==true)throw new Error("Database belum mengunci hasil. Periksa fungsi SQL lock_election_results.");
+          alert("Berhasil! Hasil pemilihan telah terkunci.");
+          await refreshResults();
+        }catch(err){alert("Gagal mengunci hasil: "+err.message);lockBtn.disabled=false;lockBtn.textContent="🔒 Kunci Hasil Resmi";}
       };
       const unlockBtn=$("unlockResults");
       if(unlockBtn)unlockBtn.onclick=async()=>{
         if(!confirm("Buka kunci hasil? Tindakan ini hanya untuk Super Admin dan dapat membuka kembali penerimaan suara jika pemilihan masih aktif."))return;
         unlockBtn.disabled=true;
-        try{const {error}=await supabase.rpc("unlock_election_results",{p_election_id:activeElectionId});if(error)throw error;await refreshResults();}
-        catch(err){alert("Gagal membuka kunci. Pastikan akun memiliki hak Super Admin: "+err.message);unlockBtn.disabled=false;}
+        const electionId=activeElectionId;
+        try{
+          const {error}=await supabase.rpc("unlock_election_results",{p_election_id:electionId});
+          if(error)throw error;
+          const {data,error:verifyError}=await supabase.from("elections").select("results_locked").eq("id",electionId).single();
+          if(verifyError)throw verifyError;
+          if(data?.results_locked!==false)throw new Error("Database belum membuka kunci hasil.");
+          alert("Kunci hasil berhasil dibuka.");
+          await refreshResults();
+        }catch(err){alert("Gagal membuka kunci: "+err.message);unlockBtn.disabled=false;}
       };
       function csvContent(){
         return [["LAPORAN HASIL PEMILIHAN"],["Nama Pemilihan",election.title],["Periode",election.academic_period||""],["Status Penguncian",latestLocked?"Terkunci":"Belum dikunci"],["Waktu Unduh",dateText],[],["Peringkat","Nomor","Nama Kandidat","Perolehan Suara","Persentase"],...ranked.map(r=>[r.rank,r.nomor,r.kandidat,r.suara,r.pct.toFixed(2)+"%"]),[],["Total Suara",total]]
