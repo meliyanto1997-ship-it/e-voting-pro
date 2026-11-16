@@ -151,9 +151,10 @@ async function loadOrganizations(){
   try{
     const {data,error}=await supabase.rpc("list_organizations");
     if(error)throw error;
+    const organizations=Array.isArray(data)?data:[];
     if(list){
       list.replaceChildren();
-      (data||[]).forEach(org=>{
+      organizations.forEach(org=>{
         const el=document.createElement("article");
         el.className="org v21-org-card";
         const status=String(org.organization_status||"inactive").toLowerCase();
@@ -163,12 +164,12 @@ async function loadOrganizations(){
             <button type="button" class="ghost v21-toggle-org">${status==="active"?"Nonaktifkan":"Aktifkan"} Lembaga</button>
             <button type="button" class="ghost v21-reset-org">Reset Lembaga</button>
             <button type="button" class="v21-delete-org danger">Hapus Permanen</button>
-          </div><p class="v21-org-message" role="status"></p>`;
+          </div><p class="v21-org-message" role="status" aria-live="polite"></p>`;
         const msg=el.querySelector(".v21-org-message");
         const toggle=el.querySelector(".v21-toggle-org");
         const reset=el.querySelector(".v21-reset-org");
         const del=el.querySelector(".v21-delete-org");
-        toggle.onclick=async ev=>{
+        toggle.addEventListener("click",async ev=>{
           ev.preventDefault();ev.stopPropagation();
           const next=status==="active"?"inactive":"active";
           if(!confirm(`Ubah status ${org.organization_name} menjadi ${next.toUpperCase()}?`))return;
@@ -176,47 +177,50 @@ async function loadOrganizations(){
           try{
             const {error}=await supabase.rpc("set_organization_status",{p_org_id:org.organization_id,p_status:next});
             if(error)throw error;
-            msg.textContent="Status lembaga berhasil diubah.";
+            msg.textContent=`Status lembaga berhasil diubah menjadi ${next.toUpperCase()}.`;
             await loadOrganizations();await loadPublicOrganizations();
-          }catch(err){msg.textContent="Gagal mengubah status: "+(err.message||err);}
+          }catch(err){msg.textContent="Gagal mengubah status: "+(err?.message||String(err));}
           finally{toggle.disabled=false;}
-        };
-        reset.onclick=async ev=>{
+        });
+        reset.addEventListener("click",async ev=>{
           ev.preventDefault();ev.stopPropagation();
-          const answer=prompt(`Reset seluruh data pemilihan ${org.organization_name}? Akun admin dan identitas lembaga dipertahankan. Ketik: RESET LEMBAGA`);
+          const answer=prompt(`Reset seluruh data pemilihan ${org.organization_name}? Identitas dan pengaturan lembaga dipertahankan. Ketik persis: RESET LEMBAGA`);
           if(answer!=="RESET LEMBAGA")return;
-          reset.disabled=true;msg.textContent="Memproses reset…";
+          reset.disabled=true;msg.textContent="Memproses reset lembaga…";
           try{
-            const {error}=await supabase.rpc("organization_lifecycle_db",{p_org_id:org.organization_id,p_action:"reset",p_confirmation:answer});
+            const {data,error}=await supabase.functions.invoke("organization-lifecycle",{body:{action:"reset",organization_id:org.organization_id,confirmation:answer}});
             if(error)throw error;
-            msg.textContent="Reset lembaga berhasil.";
+            if(!data?.success)throw new Error(data?.error||data?.message||"Reset lembaga gagal.");
+            msg.textContent=data.message||"Reset lembaga berhasil. Identitas lembaga tetap dipertahankan.";
+            if(data.failed_accounts?.length)msg.textContent+=` Ada ${data.failed_accounts.length} akun Admin yang belum terhapus; jalankan retry.`;
             if(currentOrgId===org.organization_id){activeElectionId="";activeElectionStatus="";}
             await loadOrganizations();await loadPublicOrganizations();
-          }catch(err){msg.textContent="Reset gagal: "+(err.message||err);}
+          }catch(err){msg.textContent="Reset gagal: "+(err?.message||String(err));}
           finally{reset.disabled=false;}
-        };
-        del.onclick=async ev=>{
+        });
+        del.addEventListener("click",async ev=>{
           ev.preventDefault();ev.stopPropagation();
-          const answer=prompt(`Hapus permanen lembaga ${org.organization_name}? Tindakan ini tidak dapat dibatalkan. Ketik: HAPUS PERMANEN`);
+          const answer=prompt(`PERINGATAN: Hapus permanen ${org.organization_name} beserta data pemilihan dan pengaturan. Ketik persis: HAPUS PERMANEN`);
           if(answer!=="HAPUS PERMANEN")return;
-          del.disabled=true;msg.textContent="Memproses penghapusan…";
+          del.disabled=true;msg.textContent="Memproses penghapusan permanen…";
           try{
-            const {error}=await supabase.rpc("organization_lifecycle_db",{p_org_id:org.organization_id,p_action:"delete",p_confirmation:answer});
+            const {data,error}=await supabase.functions.invoke("organization-lifecycle",{body:{action:"delete",organization_id:org.organization_id,confirmation:answer}});
             if(error)throw error;
-            msg.textContent="Lembaga berhasil dihapus permanen.";
-            if(currentOrgId===org.organization_id){currentOrgId=null;activeElectionId="";activeElectionStatus="";}
+            if(!data?.success)throw new Error(data?.error||data?.message||"Penghapusan lembaga gagal.");
+            msg.textContent=data.message||"Lembaga berhasil dihapus permanen.";
+            if(currentOrgId===org.organization_id){currentOrgId=null;currentOrgName="";activeElectionId="";activeElectionStatus="";}
             await loadOrganizations();await loadPublicOrganizations();
-          }catch(err){msg.textContent="Penghapusan gagal: "+(err.message||err);}
+          }catch(err){msg.textContent="Penghapusan gagal: "+(err?.message||String(err));}
           finally{del.disabled=false;}
-        };
+        });
         list.append(el);
       });
     }
     if(dropdown){
-      dropdown.innerHTML='<option value="">Pilih lembaga…</option>';
-      (data||[]).forEach(org=>{const op=document.createElement("option");op.value=org.organization_id;op.textContent=org.organization_name;dropdown.append(op);});
+      dropdown.replaceChildren(new Option("Pilih lembaga…",""));
+      organizations.forEach(org=>dropdown.add(new Option(org.organization_name,org.organization_id)));
     }
-  }catch(e){if(list)list.textContent="Gagal memuat lembaga: "+(e.message||e);}
+  }catch(err){if(list)list.textContent="Gagal memuat lembaga: "+(err?.message||String(err));}
 }
 
 async function renderInstitutionBranding(){
@@ -268,8 +272,52 @@ $("loginForm").onsubmit=async e=>{
   }catch(err){message.textContent="Login gagal: "+err.message;}finally{button.disabled=false;button.textContent="Masuk";}
 };
 
-$("createOrgForm").onsubmit=async e=>{e.preventDefault();const message=$("createOrgMessage"),button=e.currentTarget.querySelector("button[type='submit']");button.disabled=true;try{const {error}=await supabase.rpc("create_organization",{p_name:$("newOrgName").value.trim(),p_slug:$("newOrgSlug").value.trim().toLowerCase().replace(/\s+/g,"-")});if(error)throw error;message.textContent="Lembaga berhasil ditambahkan.";e.currentTarget.reset();await loadOrganizations();await loadPublicOrganizations();}catch(err){message.textContent="Gagal: "+err.message;}finally{button.disabled=false;}};
-$("createAdminForm").onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector("button[type='submit']"),message=$("createAdminMessage");button.disabled=true;try{const {data,error}=await supabase.functions.invoke("admin-create-user",{body:{full_name:$("adminName").value.trim(),email:$("adminEmail").value.trim().toLowerCase(),password:$("adminPassword").value,organization_id:$("adminOrganization").value}});if(error)throw error;if(!data?.success)throw new Error(data?.error||"Gagal membuat akun admin.");message.textContent="Akun admin berhasil dibuat.";form.reset();}catch(err){message.textContent="Gagal: "+err.message;}finally{button.disabled=false;}};
+$("createOrgForm").onsubmit=async e=>{
+  e.preventDefault();
+  const form=e.currentTarget;
+  const message=$("createOrgMessage");
+  const button=form.querySelector("button[type='submit']");
+  const name=$("newOrgName").value.trim();
+  const baseSlug=$("newOrgSlug").value.trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  if(!name||!baseSlug){message.textContent="Nama dan kode lembaga wajib diisi.";return;}
+  button.disabled=true;message.textContent="Menyimpan lembaga…";
+  try{
+    const {data:existing,error:listError}=await supabase.rpc("list_organizations");
+    if(listError)throw listError;
+    const used=new Set((existing||[]).map(x=>String(x.organization_slug||"").toLowerCase()));
+    let created=false, lastError=null, chosenSlug="";
+    for(let n=1;n<=50;n++){
+      const candidate=n===1?baseSlug:`${baseSlug}-${n}`;
+      if(used.has(candidate))continue;
+      const {error}=await supabase.rpc("create_organization",{p_name:name,p_slug:candidate});
+      if(!error){created=true;chosenSlug=candidate;break;}
+      lastError=error;
+      const duplicate=error.code==="23505"||/duplicate key|already exists|unique constraint/i.test(error.message||"");
+      if(!duplicate)throw error;
+      // Jika bentrok nama (bukan kode), perubahan slug tidak akan menyelesaikan.
+      if(/name|nama/i.test(error.message||""))throw new Error("Database masih membatasi nama lembaga agar unik. Perlu penyesuaian fungsi create_organization di database.");
+      used.add(candidate);
+    }
+    if(!created)throw lastError||new Error("Tidak berhasil membuat kode lembaga unik. Coba kode lain.");
+    form.reset();
+    message.textContent=`Lembaga berhasil ditambahkan. Kode unik: ${chosenSlug}. Nama lembaga yang sama diperbolehkan.`;
+    await loadOrganizations();await loadPublicOrganizations();
+  }catch(err){message.textContent="Gagal: "+(err?.message||String(err));}
+  finally{button.disabled=false;}
+};
+$("createAdminForm").onsubmit=async e=>{
+  e.preventDefault();const form=e.currentTarget,button=form.querySelector("button[type='submit']"),message=$("createAdminMessage");
+  button.disabled=true;message.textContent="Memproses akun Admin…";
+  try{
+    const {data,error}=await supabase.functions.invoke("admin-create-user",{body:{full_name:$("adminName").value.trim(),email:$("adminEmail").value.trim().toLowerCase(),password:$("adminPassword").value,organization_id:$("adminOrganization").value}});
+    if(error)throw error;
+    if(!data?.success)throw new Error(data?.error||"Gagal membuat akun admin.");
+    message.textContent=data.message||"Akun Admin berhasil dibuat atau digunakan kembali.";form.reset();
+  }catch(err){message.textContent="Gagal: "+(err?.message||String(err));}
+  finally{button.disabled=false;}
+};
 
 const view=$("adminView"),viewTitle=$("adminViewTitle"),viewMessage=$("adminViewMessage");
 function showView(title,html){viewTitle.textContent=title;viewMessage.innerHTML=html;view.classList.remove("hidden");view.scrollIntoView({behavior:"smooth",block:"start"});}
