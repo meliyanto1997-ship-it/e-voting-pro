@@ -456,6 +456,11 @@ async function openElections(){
         const {data,error}=await supabase.rpc("activate_election",{p_election_id:id});
         if(error)throw error;
         if(data===false)throw new Error("Database tidak mengonfirmasi aktivasi.");
+        const {data:verified,error:verifyError}=await supabase.from("elections")
+          .select("status").eq("id",id).single();
+        if(verifyError)throw verifyError;
+        if(String(verified?.status).toLowerCase()!=="active")
+          throw new Error("Status pemilihan belum berubah menjadi active di database.");
         await openElections();
         alert("Pemilihan berhasil diaktifkan. Sistem tetap mengikuti jadwal mulai dan akhir yang sudah ditetapkan.");
       }catch(err){alert("Aktivasi gagal: "+err.message);b.disabled=false;b.textContent="▶ Aktifkan";}
@@ -467,6 +472,13 @@ async function openElections(){
       try{
         const {error}=await supabase.rpc("deactivate_election",{p_election_id:id});
         if(error)throw error;
+        const {data:verified,error:verifyError}=await supabase.from("elections")
+          .select("status,results_locked").eq("id",id).single();
+        if(verifyError)throw verifyError;
+        if(String(verified?.status).toLowerCase()==="active")
+          throw new Error("Status pemilihan masih active di database.");
+        if(verified?.results_locked!==true)
+          throw new Error("Pemilihan sudah nonaktif, tetapi hasil belum terkunci.");
         await openElections();
         alert("Pemilihan berhasil dinonaktifkan. Hasil tetap tersimpan dan terkunci.");
       }catch(err){alert("Gagal menonaktifkan: "+err.message);b.disabled=false;b.textContent="Ⅱ Nonaktifkan";}
@@ -478,6 +490,10 @@ async function openElections(){
       try{
         const {error}=await supabase.rpc("delete_election_safe",{p_election_id:id});
         if(error)throw error;
+        const {data:remaining,error:verifyError}=await supabase.from("elections")
+          .select("id").eq("id",id).maybeSingle();
+        if(verifyError)throw verifyError;
+        if(remaining)throw new Error("Data pemilihan masih ada di database; penghapusan belum selesai.");
         await openElections();
         alert("Pemilihan berhasil dihapus.");
       }catch(err){alert("Tidak dapat menghapus pemilihan: "+err.message);b.disabled=false;b.textContent="Hapus";}
@@ -729,7 +745,7 @@ async function openResults(){
       const records=normalized.map(r=>({
         nomor:r.candidate_number??r.number??"",
         kandidat:r.candidate_name??r.name??"",
-        suara:Number(r.total_votes??r.vote_count??r.votes??0)
+        suara:Number(r.vote_count??r.votes??r.total_votes??0)
       })).sort((a,b)=>b.suara-a.suara||String(a.kandidat).localeCompare(String(b.kandidat),"id"));
       const total=records.reduce((n,r)=>n+r.suara,0);
       latestRecords=records;latestTotal=total;
@@ -802,7 +818,22 @@ async function openResults(){
       function downloadCsv(filename){const blob=new Blob(["\ufeff"+csvContent()],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
       $("downloadCsv").onclick=()=>downloadCsv(`laporan-hasil-${activeElectionId}.csv`);
       $("downloadArchive").onclick=()=>downloadCsv(`arsip-pemilihan-${activeElectionId}.csv`);
-      $("printReport").onclick=()=>{window.focus();setTimeout(()=>window.print(),100);};
+      $("printReport").onclick=()=>{
+        const w=window.open("","_blank");
+        if(!w){alert("Izinkan pop-up browser untuk mencetak rekap hasil.");return;}
+        const tableRows=ranked.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.nomor)}</td><td>${esc(r.kandidat)}</td><td>${r.suara.toLocaleString("id-ID")}</td><td>${r.pct.toFixed(2)}%</td></tr>`).join("");
+        w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Rekap Hasil Pemilihan</title><style>
+          body{font:13px Arial,sans-serif;color:#111;margin:28px}h1{text-align:center;font-size:19px;margin-bottom:6px}
+          .meta{text-align:center;line-height:1.6;margin-bottom:24px}table{width:100%;border-collapse:collapse;margin-top:16px}
+          th,td{border:1px solid #444;padding:9px;text-align:left}th{background:#eee}
+          .total{margin-top:18px;font-weight:bold}@media print{body{margin:15mm}}
+          </style></head><body><h1>REKAP HASIL PEMILIHAN</h1>
+          <div class="meta"><b>${esc(election.title)}</b><br>Periode: ${esc(election.academic_period||"-")}<br>Status hasil: ${latestLocked?"TERKUNCI":"BELUM DIKUNCI"}<br>Dicetak: ${esc(dateText)}</div>
+          <table><thead><tr><th>Peringkat</th><th>Nomor</th><th>Nama Kandidat</th><th>Suara</th><th>Persentase</th></tr></thead><tbody>${tableRows}</tbody></table>
+          <p class="total">Total suara masuk: ${total.toLocaleString("id-ID")}</p>
+          <script>window.onload=()=>window.print()<\/script></body></html>`);
+        w.document.close();
+      };
       $("printMinutes").onclick=()=>{
         const val=id=>$(id).value.trim();
         const required=[["Tempat pelaksanaan","minutesPlace"],["Ketua panitia","minutesChair"],["Sekretaris","minutesSecretary"]];
