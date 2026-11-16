@@ -116,6 +116,18 @@ body.light .ev-election-create,body.light .ev-election-list-panel,body.light .ev
 @media(max-width:760px){.ev-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ev-election-heading{align-items:flex-start;flex-direction:column}.ev-election-card{align-items:flex-start;flex-direction:column}.ev-election-actions{width:100%;justify-content:flex-start}.ev-form-grid{grid-template-columns:1fr}.ev-form-grid .ev-span-2{grid-column:auto}}
 
 `;
+
+visualStyle.textContent += `
+#adminPanel,#adminView,#adminViewMessage,#adminViewMessage *,
+#adminView button,#adminView input,#adminView select,#adminView textarea,
+#stage6Tools,#stage7Tools,#stage6Tools *,#stage7Tools *,
+.v21-control-panel,.v21-control-panel *{pointer-events:auto!important}
+#adminView{position:relative!important;z-index:30!important;isolation:isolate}
+#adminViewMessage{position:relative!important;z-index:31!important}
+#adminView button,#adminViewMessage button,#stage6Tools button,#stage7Tools button,.v21-control-panel button{
+ position:relative!important;z-index:32!important;cursor:pointer!important
+}
+`;
 document.head.appendChild(visualStyle);
 $("loginBtn").onclick = () => $("loginModal").classList.remove("hidden");
 $("closeLogin").onclick = () => $("loginModal").classList.add("hidden");
@@ -699,16 +711,16 @@ async function openResults(){
         return [["LAPORAN HASIL PEMILIHAN"],["Nama Pemilihan",election.title],["Periode",election.academic_period||""],["Status Penguncian",latestLocked?"Terkunci":"Belum dikunci"],["Waktu Unduh",dateText],[],["Peringkat","Nomor","Nama Kandidat","Perolehan Suara","Persentase"],...ranked.map(r=>[r.rank,r.nomor,r.kandidat,r.suara,r.pct.toFixed(2)+"%"]),[],["Total Suara",total]]
           .map(row=>row.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\r\n");
       }
-      function downloadCsv(filename){const blob=new Blob(["\ufeff"+csvContent()],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
+      function downloadCsv(filename){const blob=new Blob(["\ufeff"+csvContent()],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
       $("downloadCsv").onclick=()=>downloadCsv(`laporan-hasil-${activeElectionId}.csv`);
       $("downloadArchive").onclick=()=>downloadCsv(`arsip-pemilihan-${activeElectionId}.csv`);
-      $("printReport").onclick=()=>window.print();
+      $("printReport").onclick=()=>{window.focus();setTimeout(()=>window.print(),100);};
       $("printMinutes").onclick=()=>{
         const val=id=>$(id).value.trim();
         const required=[["Tempat pelaksanaan","minutesPlace"],["Ketua panitia","minutesChair"],["Sekretaris","minutesSecretary"]];
         const missing=required.filter(x=>!val(x[1])).map(x=>x[0]);
         if(missing.length){alert("Lengkapi terlebih dahulu: "+missing.join(", "));return;}
-        const w=window.open("","_blank","noopener,noreferrer");if(!w){alert("Izinkan pop-up browser untuk mencetak berita acara.");return;}
+        const w=window.open("","_blank");if(!w){alert("Izinkan pop-up browser untuk mencetak berita acara.");return;}
         const rowsHtml=ranked.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.nomor)}</td><td>${esc(r.kandidat)}</td><td>${r.suara}</td><td>${r.pct.toFixed(2)}%</td></tr>`).join("");
         w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Berita Acara Pemilihan</title><style>body{font:14px Arial,sans-serif;color:#111;margin:35px}h1{text-align:center;font-size:19px}p{line-height:1.6}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border:1px solid #555;padding:8px;text-align:left}.sign{display:grid;grid-template-columns:1fr 1fr;gap:45px;margin-top:50px;text-align:center}.sign div{min-height:110px}</style></head><body><h1>BERITA ACARA PEMUNGUTAN DAN PENGHITUNGAN SUARA</h1><p>Pada tanggal ${esc(val("minutesDate"))}, bertempat di ${esc(val("minutesPlace"))}, telah dilaksanakan pemungutan dan penghitungan suara untuk ${esc(election.title)} periode ${esc(election.academic_period||"-")}.</p><p>Hasil penghitungan suara adalah sebagai berikut:</p><table><thead><tr><th>Peringkat</th><th>Nomor</th><th>Nama Kandidat</th><th>Suara</th><th>Persentase</th></tr></thead><tbody>${rowsHtml}</tbody></table><p>Total suara masuk: <b>${total}</b>. Status hasil: <b>${latestLocked?"Terkunci":"Belum dikunci"}</b>.</p><p>Demikian berita acara ini dibuat dengan sebenarnya untuk dipergunakan sebagaimana mestinya.</p><div class="sign"><div>Ketua Panitia<br><br><br><b>${esc(val("minutesChair"))}</b></div><div>Sekretaris<br><br><br><b>${esc(val("minutesSecretary"))}</b></div><div>Saksi 1<br><br><br><b>${esc(val("minutesWitness1")||"(........................)")}</b></div><div>Saksi 2<br><br><br><b>${esc(val("minutesWitness2")||"(........................)")}</b></div></div><script>window.onload=()=>window.print()<\/script></body></html>`);
         w.document.close();
@@ -897,7 +909,7 @@ async function openBackupCenter(){
           });
         }
         const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
-        a.href=url;a.download=`backup-evoting-${String(currentOrgName||"lembaga").toLowerCase().replace(/[^a-z0-9]+/g,"-")}-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
+        a.href=url;a.download=`backup-evoting-${String(currentOrgName||"lembaga").toLowerCase().replace(/[^a-z0-9]+/g,"-")}-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
         status.textContent="Backup berhasil dibuat. Simpan file di tempat aman.";
       }catch(err){status.textContent="Backup gagal: "+err.message;}
       finally{b.disabled=false;b.textContent="⬇ Buat Backup JSON";}
@@ -1156,7 +1168,7 @@ window.createOrgBackup=async function(orgId){
     const {data:logs,error:le}=await supabase.from("audit_logs").select("*").eq("organization_id",orgId).order("created_at",{ascending:false}).limit(10000);if(le)throw le;
     backup.tables.audit_logs=logs||[];
     const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
-    a.href=url;a.download=`backup-evoting-${orgId}-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
+    a.href=url;a.download=`backup-evoting-${orgId}-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
     status.textContent="Backup berhasil dibuat.";
   }catch(e){status.textContent="Backup gagal: "+e.message;}
 };

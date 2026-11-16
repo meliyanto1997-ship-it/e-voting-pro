@@ -66,3 +66,30 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
 .v21-delete-org{background:#7f1d1d!important;color:#fff!important}
 .v21-org-message{min-height:18px;font-size:12px}
 @media(max-width:650px){.v21-actions{display:grid;grid-template-columns:1fr}.v21-actions button{width:100%}}
+
+
+/* FIX KLIK V2 — pastikan panel admin dan seluruh tombol interaktif menerima klik */
+#adminPanel, #adminView, #adminViewMessage, #adminViewMessage *,
+#adminView button, #adminView input, #adminView select, #adminView textarea,
+#stage6Tools, #stage7Tools, #stage6Tools *, #stage7Tools *,
+.v21-control-panel, .v21-control-panel * {
+  pointer-events: auto !important;
+}
+#adminView { position: relative !important; z-index: 30 !important; isolation: isolate; }
+#adminViewMessage { position: relative !important; z-index: 31 !important; }
+#adminView button, #adminViewMessage button,
+#stage6Tools button, #stage7Tools button,
+.v21-control-panel button {
+  position: relative !important;
+  z-index: 32 !important;
+  cursor: pointer !important;
+}
+#adminView button:disabled, #adminViewMessage button:disabled {
+  cursor: wait !important;
+}
+@media print {
+  body * { visibility: hidden !important; }
+  #adminView, #adminView * { visibility: visible !important; }
+  #adminView { position: absolute !important; inset: 0 !important; width: 100% !important; z-index: 99999 !important; }
+  .ev-report-actions, .ev-lock-actions, .ev-minutes-panel button { display: none !important; }
+}
