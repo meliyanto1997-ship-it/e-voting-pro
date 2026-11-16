@@ -1605,3 +1605,184 @@ async function renderV21Controls(){
  .v21-org-card .v21-actions button{position:relative!important;z-index:26!important;cursor:pointer!important}`;
  document.head.appendChild(style);
 })();
+
+
+/* ============================================================
+   FIX TERARAH: tombol operasional pemilihan & kandidat
+   Delegasi fase capture agar tombol tetap bekerja setelah panel
+   dirender ulang. Hanya menangani 5 kelompok tindakan terkait.
+   ============================================================ */
+(function installElectionActionClickFix(){
+  if (window.__evElectionActionClickFixInstalled) return;
+  window.__evElectionActionClickFixInstalled = true;
+
+  document.addEventListener("click", async (event) => {
+    const button = event.target instanceof Element
+      ? event.target.closest(
+          "[data-activate], [data-deactivate], [data-remove], " +
+          "[data-delete-candidate], #v21ResetElection"
+        )
+      : null;
+    if (!button) return;
+
+    // Ambil alih klik satu kali; cegah handler lama menjalankan aksi ganda.
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === "function") {
+      event.stopImmediatePropagation();
+    }
+    if (button.disabled) return;
+
+    const fail = (prefix, error) => {
+      alert(`${prefix}: ${error?.message || String(error)}`);
+    };
+
+    // 1. AKTIFKAN PEMILIHAN
+    if (button.hasAttribute("data-activate")) {
+      const electionId = button.dataset.activate;
+      button.disabled = true;
+      const oldText = button.textContent;
+      button.textContent = "Mengaktifkan…";
+      try {
+        const [candidateResult, tokenResult] = await Promise.all([
+          supabase.from("candidates").select("id", { count: "exact", head: true }).eq("election_id", electionId),
+          supabase.from("voter_tokens").select("id", { count: "exact", head: true }).eq("election_id", electionId)
+        ]);
+        if (candidateResult.error) throw candidateResult.error;
+        if (tokenResult.error) throw tokenResult.error;
+        if ((candidateResult.count || 0) < 2) throw new Error("Tambahkan minimal 2 kandidat terlebih dahulu.");
+        if ((tokenResult.count || 0) < 1) throw new Error("Buat token pemilih terlebih dahulu.");
+        if (!confirm("Aktifkan pemilihan ini? Pastikan kandidat, token, dan jadwal sudah benar.")) return;
+
+        const { data, error } = await supabase.rpc("activate_election", { p_election_id: electionId });
+        if (error) throw error;
+        if (data === false) throw new Error("Database tidak mengonfirmasi aktivasi.");
+        const { data: verified, error: verifyError } = await supabase
+          .from("elections").select("status").eq("id", electionId).single();
+        if (verifyError) throw verifyError;
+        if (String(verified?.status).toLowerCase() !== "active") {
+          throw new Error("Status pemilihan belum berubah menjadi active di database.");
+        }
+        await openElections();
+        alert("Pemilihan berhasil diaktifkan.");
+      } catch (error) {
+        fail("Aktivasi gagal", error);
+      } finally {
+        if (button.isConnected) { button.disabled = false; button.textContent = oldText; }
+      }
+      return;
+    }
+
+    // 2. NONAKTIFKAN PEMILIHAN
+    if (button.hasAttribute("data-deactivate")) {
+      const electionId = button.dataset.deactivate;
+      if (!confirm("Nonaktifkan pemilihan ini? Pemungutan suara akan dihentikan dan hasil dikunci.")) return;
+      button.disabled = true;
+      const oldText = button.textContent;
+      button.textContent = "Memproses…";
+      try {
+        const { error } = await supabase.rpc("deactivate_election", { p_election_id: electionId });
+        if (error) throw error;
+        const { data, error: verifyError } = await supabase
+          .from("elections").select("status,results_locked").eq("id", electionId).single();
+        if (verifyError) throw verifyError;
+        if (String(data?.status).toLowerCase() === "active") throw new Error("Pemilihan masih berstatus active.");
+        if (data?.results_locked !== true) throw new Error("Pemilihan nonaktif tetapi hasil belum terkunci.");
+        await openElections();
+        alert("Pemilihan berhasil dinonaktifkan.");
+      } catch (error) {
+        fail("Gagal menonaktifkan", error);
+      } finally {
+        if (button.isConnected) { button.disabled = false; button.textContent = oldText; }
+      }
+      return;
+    }
+
+    // 3. HAPUS PEMILIHAN
+    if (button.hasAttribute("data-remove")) {
+      const electionId = button.dataset.remove;
+      if (!confirm("Hapus pemilihan ini? Database hanya mengizinkan penghapusan sesuai aturan data suara.")) return;
+      button.disabled = true;
+      const oldText = button.textContent;
+      button.textContent = "Menghapus…";
+      try {
+        const { error } = await supabase.rpc("delete_election_safe", { p_election_id: electionId });
+        if (error) throw error;
+        const { data, error: verifyError } = await supabase
+          .from("elections").select("id").eq("id", electionId).maybeSingle();
+        if (verifyError) throw verifyError;
+        if (data) throw new Error("Data pemilihan masih ada di database.");
+        await openElections();
+        alert("Pemilihan berhasil dihapus.");
+      } catch (error) {
+        fail("Gagal menghapus pemilihan", error);
+      } finally {
+        if (button.isConnected) { button.disabled = false; button.textContent = oldText; }
+      }
+      return;
+    }
+
+    // 4. HAPUS KANDIDAT
+    if (button.hasAttribute("data-delete-candidate")) {
+      const candidateId = button.dataset.deleteCandidate;
+      if (!confirm("Hapus kandidat ini? Penghapusan dapat ditolak jika kandidat sudah memiliki suara.")) return;
+      button.disabled = true;
+      try {
+        const { data, error } = await supabase.from("candidates")
+          .delete().eq("id", candidateId).eq("election_id", activeElectionId).select("id");
+        if (error) throw error;
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error("Kandidat tidak terhapus. Periksa hak akses atau apakah kandidat sudah memiliki suara.");
+        }
+        await openCandidates();
+      } catch (error) {
+        fail("Gagal menghapus kandidat", error);
+        if (button.isConnected) button.disabled = false;
+      }
+      return;
+    }
+
+    // 5. RESET SUARA & TOKEN
+    if (button.id === "v21ResetElection") {
+      const select = document.getElementById("v21ElectionSelect");
+      const message = document.getElementById("v21AdminResetMessage");
+      const electionId = select?.value;
+      if (!electionId) {
+        if (message) message.textContent = "Pilih pemilihan terlebih dahulu.";
+        return;
+      }
+      const answer = prompt("Reset suara dan penggunaan token? Kandidat dan token tetap dipertahankan. Ketik RESET");
+      if (answer !== "RESET") return;
+      button.disabled = true;
+      if (message) message.textContent = "Memproses reset…";
+      try {
+        const { error } = await supabase.rpc("reset_election_data", {
+          p_election_id: electionId,
+          p_confirmation: answer
+        });
+        if (error) throw error;
+        if (message) message.textContent = "Reset berhasil. Suara dihapus dan penggunaan token dikembalikan ke nol.";
+        if (typeof openElections === "function") await openElections();
+      } catch (error) {
+        if (message) message.textContent = `Reset gagal: ${error?.message || String(error)}`;
+      } finally {
+        if (button.isConnected) button.disabled = false;
+      }
+    }
+  }, true);
+
+  // Pastikan hanya tombol operasional terkait yang menerima klik.
+  const style = document.createElement("style");
+  style.id = "ev-election-action-click-fix-style";
+  style.textContent = `
+    #adminView [data-activate], #adminView [data-deactivate],
+    #adminView [data-remove], #adminView [data-delete-candidate],
+    #v21ResetElection {
+      pointer-events:auto !important;
+      cursor:pointer !important;
+      position:relative;
+      z-index:5;
+    }
+  `;
+  document.head.appendChild(style);
+})();
