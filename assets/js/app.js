@@ -617,7 +617,7 @@ async function openResults(){
       <div class="ev-report-panel ev-analytics-page">
         <div class="ev-election-heading"><div><span class="ev-kicker">ROBOTIC ANALYTICS · TAHAP 5</span><h2>Pengesahan & Arsip Pemilihan</h2><p>Periksa hasil, kunci hasil resmi, dan siapkan berita acara.</p></div></div>
         ${electionSelect(rows)}
-        <div class="ev-report-toolbar"><button id="loadResults" class="primary">↻ Perbarui Hasil</button><span id="resultUpdated" class="ev-muted">Belum diperbarui</span></div>
+        <div class="ev-report-toolbar"><button id="loadResults" type="button" class="primary">↻ Perbarui Hasil</button><span id="resultUpdated" class="ev-muted">Belum diperbarui</span></div>
         <div id="resultOutput"><div class="ev-empty">Pilih pemilihan lalu tekan Perbarui Hasil.</div></div>
       </div>`);
     const sel=$("moduleElection");if(activeElectionId)sel.value=activeElectionId;
@@ -632,16 +632,14 @@ async function openResults(){
       if(electionError)throw electionError;
       if(!election)throw new Error("Data pemilihan tidak ditemukan atau tidak dapat diakses.");
       latestElection=election;latestLocked=Boolean(election.results_locked);
-      let result,error;
-      ({data:result,error}=await supabase.rpc("get_election_results",{p_election_id:activeElectionId}));
-      if(error)({data:result,error}=await supabase.rpc("get_vote_results",{p_election_id:activeElectionId}));
+      const {data:result,error}=await supabase.rpc("get_election_results",{p_election_id:activeElectionId});
       if(error)throw error;
       const normalized=Array.isArray(result)?result:(result?.results||result?.data||[]);
       if(!Array.isArray(normalized))throw new Error("Format hasil dari RPC tidak dikenali.");
       const records=normalized.map(r=>({
         nomor:r.candidate_number??r.number??"",
         kandidat:r.candidate_name??r.name??"",
-        suara:Number(r.total_votes??r.vote_count??r.votes??0)
+        suara:Number(r.vote_count??r.votes??r.total_votes??0)
       })).sort((a,b)=>b.suara-a.suara||String(a.kandidat).localeCompare(String(b.kandidat),"id"));
       const total=records.reduce((n,r)=>n+r.suara,0);
       latestRecords=records;latestTotal=total;
