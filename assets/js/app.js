@@ -132,7 +132,9 @@ document.head.appendChild(visualStyle);
 $("loginBtn").onclick = () => $("loginModal").classList.remove("hidden");
 $("closeLogin").onclick = () => $("loginModal").classList.add("hidden");
 const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_PROJECT_REF") && !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
-$("connectionState").textContent = configured ? "Menguji koneksi Supabase…" : "Mode pratinjau — konfigurasi Supabase belum tersedia";
+$("connectionState").textContent = "";
+$("connectionState").hidden = true;
+const connectionDot = document.querySelector(".status i"); if (connectionDot) connectionDot.hidden = true;
 
 async function loadPublicOrganizations(){
   const grid = $("orgGrid"); grid.textContent = "Memuat daftar lembaga…";
@@ -143,8 +145,7 @@ async function loadPublicOrganizations(){
     data.forEach(org=>{const card=document.createElement("article");card.className="org";card.innerHTML=`<span class="badge">LEMBAGA</span><h3>${esc(org.organization_name)}</h3><p>Kode: ${esc(org.organization_slug)}</p><strong>PORTAL PEMILIHAN</strong>`;grid.append(card);});
   }catch(e){grid.textContent="Gagal memuat lembaga: "+e.message;}
 }
-async function testConnection(){try{const {error}=await supabase.from("organizations").select("id").limit(1);if(error)throw error;$("connectionState").textContent="Supabase berhasil terhubung";}catch(e){$("connectionState").textContent="Supabase terhubung / menunggu hak akses";console.warn(e.message);}}
-if(configured){loadPublicOrganizations();testConnection();}
+if(configured){loadPublicOrganizations();}
 
 async function loadOrganizations(){
   const list=$("organizationList"), dropdown=$("adminOrganization");
@@ -586,7 +587,7 @@ async function openCandidates(){
       const box=$("candidateRows");if(!activeElectionId){box.textContent="Pilih pemilihan terlebih dahulu.";return;}
       const {data,error}=await supabase.from("candidates").select("id,number,name,photo_url,bio,vision,mission").eq("election_id",activeElectionId).order("number");
       if(error)throw error;
-      const candidates=data||[];$("candidateCount").textContent=`${candidates.length} kandidat`;
+      const candidates=(data||[]).slice().sort((a,b)=>(Number.parseInt(a.number,10)||0)-(Number.parseInt(b.number,10)||0)||String(a.name||"").localeCompare(String(b.name||""),"id"));$("candidateCount").textContent=`${candidates.length} kandidat`;
       box.innerHTML=candidates.map(c=>`<article class="ev-candidate-card">
         ${c.photo_url?`<img class="ev-candidate-photo" src="${esc(c.photo_url)}" alt="Foto ${esc(c.name)}">`:`<div class="ev-candidate-photo ev-photo-placeholder">FOTO<br>${esc(c.number)}</div>`}
         <div class="ev-candidate-details"><div class="ev-candidate-name">Nomor ${esc(c.number)} · ${esc(c.name)}</div><p>${esc(c.bio||"Belum ada profil singkat.")}</p>
@@ -731,7 +732,7 @@ async function openResults(){
       const out=$("resultOutput");out.innerHTML=`<div class="ev-empty">Mengambil hasil pemilihan…</div>`;
       if(!activeElectionId)throw new Error("Pilih pemilihan terlebih dahulu.");
       const {data:election,error:electionError}=await supabase.from("elections")
-        .select("id,title,academic_period,status,results_locked,starts_at,ends_at")
+        .select("id,title,academic_period,status,results_locked,live_results_enabled,starts_at,ends_at")
         .eq("id",activeElectionId).maybeSingle();
       if(electionError)throw electionError;
       if(!election)throw new Error("Data pemilihan tidak ditemukan atau tidak dapat diakses.");
@@ -745,8 +746,8 @@ async function openResults(){
       const records=normalized.map(r=>({
         nomor:r.candidate_number??r.number??"",
         kandidat:r.candidate_name??r.name??"",
-        suara:Number(r.vote_count??r.votes??r.total_votes??0)
-      })).sort((a,b)=>b.suara-a.suara||String(a.kandidat).localeCompare(String(b.kandidat),"id"));
+        suara:Number(r.vote_count??r.votes??0)
+      })).sort((a,b)=>b.suara-a.suara||(Number.parseInt(a.nomor,10)||0)-(Number.parseInt(b.nomor,10)||0)||String(a.kandidat).localeCompare(String(b.kandidat),"id"));
       const total=records.reduce((n,r)=>n+r.suara,0);
       latestRecords=records;latestTotal=total;
       const ranked=records.map((r,i)=>({...r,rank:i+1,pct:total?r.suara/total*100:0}));
@@ -754,9 +755,10 @@ async function openResults(){
       const dateText=new Date().toLocaleString("id-ID",{dateStyle:"long",timeStyle:"short"});
       const statusBadge=latestLocked?`<span class="ev-lock-badge">🔒 HASIL TERKUNCI</span>`:`<span class="ev-unlock-badge">HASIL BELUM DIKUNCI</span>`;
       out.innerHTML=`
-        <div class="ev-lock-panel"><div><b>Status pengesahan</b><p>${statusBadge}</p><small>${latestLocked?"Hasil telah dikunci melalui Supabase.":"Kunci hasil setelah panitia menyelesaikan pemeriksaan."}</small></div>
+        <div class="ev-lock-panel"><div><b>Status pengesahan</b><p>${statusBadge}</p><small>${latestLocked?"Hasil telah dikunci.":"Kunci hasil setelah panitia menyelesaikan pemeriksaan."}</small></div>
           <div class="ev-lock-actions">${latestLocked?`<button id="unlockResults" type="button">Buka Kunci (Super Admin)</button>`:`<button id="lockResults" class="primary" type="button">🔒 Kunci Hasil Resmi</button>`}</div>
         </div>
+        <section class="ev-live-board-admin"><div><b>LIVE LEADERBOARD PUBLIK</b><p>${election.live_results_enabled?"Aktif — tautan papan peringkat dapat dibagikan.":"Nonaktif — hasil belum ditampilkan kepada publik."}</p></div><div class="ev-live-board-actions"><button id="toggleLiveBoard" type="button" class="primary">${election.live_results_enabled?"Matikan Live Leaderboard":"Aktifkan Live Leaderboard"}</button>${election.live_results_enabled?`<button id="openLiveBoard" type="button">Buka Link Leaderboard</button><button id="copyLiveBoard" type="button">Salin Link Leaderboard</button>`:""}</div></section>
         <section class="ev-report-summary ev-report-summary-v2">
           <div><span>Total suara masuk</span><strong>${total.toLocaleString("id-ID")}</strong></div>
           <div><span>Jumlah kandidat</span><strong>${records.length.toLocaleString("id-ID")}</strong></div>
@@ -781,6 +783,17 @@ async function openResults(){
         <div class="ev-report-meta">Pemilihan: <b>${esc(election.title)}</b> · Periode: ${esc(election.academic_period||"-")} · Status: ${esc(election.status)}<br>Data diperbarui: ${esc(dateText)}</div>
         <div class="ev-report-actions"><button id="downloadCsv" class="ev-activate" type="button">⬇ Unduh Laporan CSV / Excel</button><button id="printReport" type="button">Cetak Rekap Hasil</button></div>`;
       $("resultUpdated").textContent="Diperbarui: "+dateText;
+      const liveBoardUrl=`${window.location.origin}${window.location.pathname}?leaderboard=${encodeURIComponent(election.id)}`;
+      const liveToggle=$("toggleLiveBoard");
+      if(liveToggle)liveToggle.onclick=async()=>{
+        const enable=!Boolean(election.live_results_enabled);
+        if(!confirm(enable?"Aktifkan Live Leaderboard? Perolehan suara akan dapat dilihat publik melalui tautan khusus.":"Matikan Live Leaderboard? Tautan publik tidak lagi menampilkan perolehan."))return;
+        liveToggle.disabled=true;liveToggle.textContent="Menyimpan…";
+        try{const {error}=await supabase.rpc("set_election_live_results",{p_election_id:election.id,p_enabled:enable});if(error)throw error;await refreshResults();}
+        catch(err){alert("Gagal mengubah Live Leaderboard: "+err.message);liveToggle.disabled=false;liveToggle.textContent=enable?"Aktifkan Live Leaderboard":"Matikan Live Leaderboard";}
+      };
+      const openBoard=$("openLiveBoard");if(openBoard)openBoard.onclick=()=>window.open(liveBoardUrl,"_blank","noopener,noreferrer");
+      const copyBoard=$("copyLiveBoard");if(copyBoard)copyBoard.onclick=async()=>{try{await navigator.clipboard.writeText(liveBoardUrl);copyBoard.textContent="✓ Link Tersalin";setTimeout(()=>{if(copyBoard.isConnected)copyBoard.textContent="Salin Link Leaderboard";},1800);}catch{prompt("Salin link leaderboard:",liveBoardUrl);}};
       const lockBtn=$("lockResults");
       if(lockBtn)lockBtn.onclick=async()=>{
         if(!confirm("Kunci hasil pemilihan ini? Pastikan pemungutan suara telah selesai. Setelah dikunci, suara baru akan ditolak oleh sistem."))return;
@@ -852,6 +865,49 @@ async function openResults(){
 const actions={elections:openElections,candidates:openCandidates,tokens:openTokens,results:openResults};document.querySelectorAll(".menu-card").forEach(card=>card.addEventListener("click",()=>actions[card.dataset.view]?.()));$("backToDashboard").onclick=()=>view.classList.add("hidden");
 
 
+// LEADERBOARD PUBLIK — tautan mandiri ?leaderboard=<election_id>
+const leaderboardElectionId = new URLSearchParams(location.search).get("leaderboard");
+if (leaderboardElectionId) {
+  const boardStyle=document.createElement("style");
+  boardStyle.textContent=`
+    body.board-mode{margin:0;background:radial-gradient(1000px 600px at 12% -8%,#0e749044,transparent 60%),radial-gradient(900px 520px at 100% 10%,#7e22ce33,transparent 55%),linear-gradient(145deg,#06111f,#081a2d 55%,#030914);color:#eff7ff;font-family:Inter,system-ui,sans-serif;min-height:100vh}
+    body.board-mode>*:not(#publicLeaderboard){display:none!important}#publicLeaderboard{min-height:100vh;padding:clamp(14px,3vw,34px);box-sizing:border-box}.lb-shell{max-width:1120px;margin:auto}
+    .lb-head{display:flex;justify-content:space-between;align-items:center;gap:14px;border-bottom:1px solid #ffffff22;padding:4px 2px 18px;margin-bottom:22px}.lb-brand{display:flex;align-items:center;gap:12px}.lb-logo{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,#06b6d4,#2563eb);font-size:22px;box-shadow:0 8px 28px #0891b255}.lb-brand b{font-size:17px;letter-spacing:.8px}
+    .lb-kicker{color:#35d9ee;font-size:10px;font-weight:900;letter-spacing:2.2px;text-transform:uppercase}.lb-muted{color:#a9bfd5}.lb-live-state{display:inline-flex;align-items:center;gap:8px;border:1px solid #176c59;background:#07372f88;color:#7ef2c5;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800}.lb-live-dot{width:8px;height:8px;border-radius:50%;background:#34e5a1;box-shadow:0 0 0 0 #34e5a177;animation:lbLivePulse 1.6s infinite}@keyframes lbLivePulse{70%{box-shadow:0 0 0 9px #34e5a100}100%{box-shadow:0 0 0 0 #34e5a100}}
+    .lb-card{background:linear-gradient(145deg,#112840f5,#09192bf5);border:1px solid #4d8ebe55;border-radius:22px;padding:clamp(17px,3vw,27px);margin:16px 0;box-shadow:0 18px 55px #0003}.lb-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:1fr auto;align-items:center;gap:18px;background:linear-gradient(120deg,#0c3850,#102b49 58%,#282451);border-color:#247e9b}.lb-title{font-size:clamp(23px,4vw,36px);line-height:1.12;margin:9px 0 8px;letter-spacing:-.8px}.lb-total-box{text-align:right;position:relative;z-index:1}.lb-total{font-size:clamp(32px,5vw,48px);font-weight:950;line-height:1;color:#65e7f4;font-variant-numeric:tabular-nums;text-shadow:0 0 25px #22d3ee44}.lb-total-label{font-size:11px;color:#b6d3e8;margin-top:7px;letter-spacing:1px;text-transform:uppercase}.lb-update{display:flex;align-items:center;gap:7px;color:#a9bfd5;font-size:12px;margin-top:14px}.lb-update-dot{width:6px;height:6px;background:#38d9a4;border-radius:50%}
+    .lb-section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin-bottom:8px}.lb-section-head h2{margin:5px 0 0;font-size:21px}.lb-row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:14px;align-items:center;padding:17px 0;border-bottom:1px solid #5383ab33;transition:background .25s}.lb-row:last-child{border:0}.lb-row.is-leader{margin:0 -10px;padding:18px 10px;border-radius:15px;background:linear-gradient(90deg,#0c665333,transparent 90%)}.lb-rank{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#173652;color:#bcecff;font-weight:950;font-size:17px;border:1px solid #315879}.lb-row.is-leader .lb-rank{background:linear-gradient(135deg,#e7b94c,#f97316);color:#241604;border:0;box-shadow:0 6px 20px #f59e0b33}.lb-name{font-weight:850;font-size:clamp(14px,2vw,17px);overflow-wrap:anywhere}.lb-sub{font-size:12px;color:#9fb7cd;margin-top:4px}.lb-stats{text-align:right;min-width:116px}.lb-votes{font-size:18px;font-weight:950;font-variant-numeric:tabular-nums}.lb-pct{font-size:12px;color:#a9bfd5;margin-top:3px}.lb-trend{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:900}.lb-trend.up{color:#75f2c0;background:#0b493b}.lb-trend.down{color:#ff9b9b;background:#54242b}.lb-trend.same{color:#a9bfd5;background:#1a3046}.lb-track{height:11px;background:#142d45;border:1px solid #294d6b;border-radius:99px;overflow:hidden;margin-top:12px;grid-column:2/4}.lb-bar{height:100%;width:0;background:linear-gradient(90deg,#0891b2,#22d3ee 55%,#a3e635);border-radius:99px;transition:width 1s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 16px #22d3ee55}.lb-row.is-leader .lb-bar{background:linear-gradient(90deg,#f59e0b,#fde68a)}.lb-row.vote-up .lb-votes{animation:lbCountUp .85s ease}.lb-row.vote-down .lb-votes{animation:lbCountDown .85s ease}.lb-row.rank-up{animation:lbRankUp .9s ease}.lb-row.rank-down{animation:lbRankDown .9s ease}@keyframes lbCountUp{0%{color:#fff}35%{color:#5df2b7;transform:scale(1.2)}100%{color:inherit;transform:scale(1)}}@keyframes lbCountDown{0%{color:#fff}35%{color:#ff8585;transform:scale(.94)}100%{color:inherit;transform:scale(1)}}@keyframes lbRankUp{40%{background:#0c765044;transform:translateY(-4px)}}@keyframes lbRankDown{40%{background:#8b303044;transform:translateY(3px)}}
+    .lb-empty{text-align:center;padding:38px 12px;color:#9fb7cd}.lb-foot{text-align:center;color:#7894ad;font-size:11px;padding:20px 8px 8px}@media(max-width:620px){#publicLeaderboard{padding:12px}.lb-hero{grid-template-columns:1fr}.lb-total-box{text-align:left}.lb-row{grid-template-columns:38px minmax(0,1fr) auto;gap:9px;padding:14px 0}.lb-rank{width:34px;height:34px}.lb-stats{min-width:82px}.lb-votes{font-size:15px}.lb-track{grid-column:2/4}.lb-name{font-size:14px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+  `;
+  document.head.appendChild(boardStyle);document.body.classList.add("board-mode");
+  const boardRoot=document.createElement("main");boardRoot.id="publicLeaderboard";document.body.appendChild(boardRoot);
+  const boardEsc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  let boardTimer=null,boardBusy=false,boardPrevious=new Map(),boardFirstRender=true;
+  async function refreshPublicLeaderboard(){
+    if(boardBusy)return;boardBusy=true;
+    try{
+      const {data:info,error:infoError}=await supabase.rpc("get_public_election",{p_election_id:leaderboardElectionId});if(infoError)throw infoError;
+      const election=Array.isArray(info)?info[0]:info;if(!election?.id)throw new Error("Pemilihan tidak ditemukan atau tidak aktif.");
+      const {data:rows,error}=await supabase.rpc("get_public_live_results",{p_election_id:leaderboardElectionId});if(error)throw error;
+      const records=(Array.isArray(rows)?rows:[]).map(r=>({id:String(r.candidate_id||r.id||`${r.candidate_number}-${r.candidate_name}`),number:r.candidate_number,name:r.candidate_name,votes:Number(r.vote_count||0),total:Number(r.total_votes||0),pct:Number(r.vote_percentage||0)})).sort((a,b)=>b.votes-a.votes||(Number.parseInt(a.number,10)||0)-(Number.parseInt(b.number,10)||0)||String(a.name).localeCompare(String(b.name),"id"));
+      const total=records.length?Number(records[0].total||records.reduce((s,r)=>s+r.votes,0)):0;
+      const now=new Date().toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+      const previousTotal=boardPrevious.size?[...boardPrevious.values()].reduce((s,r)=>s+r.votes,0):total;
+      const totalChanged=total!==previousTotal;
+      const rowsHtml=records.map((r,i)=>{
+        const old=boardPrevious.get(r.id);const oldRank=old?.rank??i+1;const rank=i+1;
+        const delta=old?r.votes-old.votes:0;const rankDelta=old?oldRank-rank:0;
+        const trend=delta>0?`<span class="lb-trend up">▲ +${delta.toLocaleString("id-ID")} suara</span>`:delta<0?`<span class="lb-trend down">▼ ${delta.toLocaleString("id-ID")} suara</span>`:`<span class="lb-trend same">${boardFirstRender?"POSISI AWAL":"TETAP"}</span>`;
+        const motion=!boardFirstRender&&delta>0?"vote-up":!boardFirstRender&&delta<0?"vote-down":!boardFirstRender&&rankDelta>0?"rank-up":!boardFirstRender&&rankDelta<0?"rank-down":"";
+        const pct=Number.isFinite(r.pct)?r.pct:(total?r.votes/total*100:0);
+        return `<article class="lb-row ${i===0&&total>0?"is-leader":""} ${motion}" data-candidate="${boardEsc(r.id)}"><div class="lb-rank">${rank===1?"♛":String(rank).padStart(2,"0")}</div><div><div class="lb-name">${boardEsc(r.name)}</div><div class="lb-sub">Nomor urut ${boardEsc(r.number??"-")}</div>${trend}<div class="lb-track"><div class="lb-bar" style="width:${Math.max(0,Math.min(100,pct))}%"></div></div></div><div class="lb-stats"><div class="lb-votes">${r.votes.toLocaleString("id-ID")}</div><div class="lb-pct">${pct.toFixed(2)}%</div>${rankDelta>0?`<div class="lb-trend up">▲ Naik ${rankDelta}</div>`:rankDelta<0?`<div class="lb-trend down">▼ Turun ${Math.abs(rankDelta)}</div>`:""}</div></article>`;
+      }).join("");
+      boardRoot.innerHTML=`<div class="lb-shell"><header class="lb-head"><div class="lb-brand"><div class="lb-logo">◈</div><div><b>E-VOTING PRO</b><div class="lb-kicker">LIVE LEADERBOARD</div></div></div><span class="lb-live-state"><i class="lb-live-dot"></i> LIVE</span></header><section class="lb-card lb-hero"><div><div class="lb-kicker">PAPAN PERINGKAT PUBLIK</div><h1 class="lb-title">${boardEsc(election.title||"Hasil Pemilihan")}</h1><div class="lb-muted">${boardEsc(election.academic_period||"Rekapitulasi suara")}</div><div class="lb-update"><i class="lb-update-dot"></i> Pembaruan otomatis setiap 5 detik · ${now}</div></div><div class="lb-total-box"><div class="lb-total">${total.toLocaleString("id-ID")}</div><div class="lb-total-label">Total suara masuk</div>${totalChanged&&!boardFirstRender?(total>previousTotal?`<span class="lb-trend up">▲ Suara bertambah</span>`:`<span class="lb-trend down">▼ Total suara berkurang</span>`):""}</div></section><section class="lb-card"><div class="lb-section-head"><div><div class="lb-kicker">PERINGKAT TERKINI</div><h2>Perolehan Kandidat</h2></div><span class="lb-muted">${records.length} kandidat</span></div>${rowsHtml||`<div class="lb-empty">Belum ada suara masuk.</div>`}</section><div class="lb-foot">Data diperbarui otomatis · © ${new Date().getFullYear()} E-VOTING PRO · @Mr.Mey</div></div>`;
+      boardPrevious=new Map(records.map((r,i)=>[r.id,{votes:r.votes,rank:i+1}]));boardFirstRender=false;
+    }catch(err){boardRoot.innerHTML=`<div class="lb-shell"><section class="lb-card"><h2>Leaderboard tidak tersedia</h2><p class="lb-muted">${boardEsc(err.message)}</p></section></div>`;if(boardTimer){clearInterval(boardTimer);boardTimer=null;}}
+    finally{boardBusy=false;}
+  }
+  refreshPublicLeaderboard();boardTimer=setInterval(()=>{if(document.visibilityState==="visible")refreshPublicLeaderboard();},5000);
+} else {
 // PORTAL PEMILIH PUBLIK — aktif hanya pada URL ?vote=<election_id>
 const voterElectionId = new URLSearchParams(location.search).get("vote");
 if (voterElectionId) {
@@ -1042,7 +1098,7 @@ async function loadVoterPortal(){
       if(error)throw error;
       const info=Array.isArray(data)?data[0]:data;
       if(!info||!info.id)throw new Error("Pemilihan tidak ditemukan, belum aktif, atau belum dapat diakses.");
-      voterCandidates=Array.isArray(info.candidates)?info.candidates:[];
+      voterCandidates=(Array.isArray(info.candidates)?info.candidates:[]).slice().sort((a,b)=>(Number.parseInt(a.number,10)||0)-(Number.parseInt(b.number,10)||0)||String(a.name||"").localeCompare(String(b.name||""),"id"));
       if(!voterCandidates.length)throw new Error("Belum ada kandidat pada pemilihan ini.");
       let orgBrand={organization_name:"",unit_name:"",logo_url:""};
       if(info.organization_id){
@@ -1092,6 +1148,7 @@ async function loadVoterPortal(){
   }
   loadVoterPortal();
 }
+}
 
 // Tahap 4 — styling analitik hasil pemilihan
 {
@@ -1111,6 +1168,8 @@ async function loadVoterPortal(){
  .ev-chart-track{height:15px;background:var(--ev-field);border-radius:20px;overflow:hidden;border:1px solid var(--ev-line)}
  .ev-chart-bar{height:100%;min-width:0;border-radius:20px;background:linear-gradient(90deg,#0891b2,#22d3ee,#a3e635);transition:width .5s ease}
  .ev-report-meta{margin:14px 0;color:var(--ev-muted);font-size:12px;line-height:1.8}
+ .ev-live-board-admin{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:16px;border:1px solid var(--ev-line);border-radius:14px;background:var(--ev-panel);color:var(--ev-text)}
+ .ev-live-board-admin p{margin:6px 0 0;color:var(--ev-muted);font-size:12px}.ev-live-board-actions{display:flex;gap:8px;flex-wrap:wrap}.ev-live-board-actions button{padding:10px 13px;border-radius:9px;border:1px solid var(--ev-line);cursor:pointer}
  @media print{body *{visibility:hidden!important}#adminView,#adminView *{visibility:visible!important}#adminView{position:absolute;left:0;top:0;width:100%;background:#fff!important;color:#111!important}.ev-report-panel,.ev-report-panel *{color:#111!important;background:#fff!important;box-shadow:none!important}.ev-report-actions,.ev-report-toolbar{display:none!important}.ev-chart-track{border:1px solid #888!important}.ev-chart-bar{background:#777!important}}
  `;
  document.head.appendChild(s);
@@ -1604,185 +1663,4 @@ async function renderV21Controls(){
  .v21-org-card .v21-actions{position:relative!important;z-index:25!important}
  .v21-org-card .v21-actions button{position:relative!important;z-index:26!important;cursor:pointer!important}`;
  document.head.appendChild(style);
-})();
-
-
-/* ============================================================
-   FIX TERARAH: tombol operasional pemilihan & kandidat
-   Delegasi fase capture agar tombol tetap bekerja setelah panel
-   dirender ulang. Hanya menangani 5 kelompok tindakan terkait.
-   ============================================================ */
-(function installElectionActionClickFix(){
-  if (window.__evElectionActionClickFixInstalled) return;
-  window.__evElectionActionClickFixInstalled = true;
-
-  document.addEventListener("click", async (event) => {
-    const button = event.target instanceof Element
-      ? event.target.closest(
-          "[data-activate], [data-deactivate], [data-remove], " +
-          "[data-delete-candidate], #v21ResetElection"
-        )
-      : null;
-    if (!button) return;
-
-    // Ambil alih klik satu kali; cegah handler lama menjalankan aksi ganda.
-    event.preventDefault();
-    event.stopPropagation();
-    if (typeof event.stopImmediatePropagation === "function") {
-      event.stopImmediatePropagation();
-    }
-    if (button.disabled) return;
-
-    const fail = (prefix, error) => {
-      alert(`${prefix}: ${error?.message || String(error)}`);
-    };
-
-    // 1. AKTIFKAN PEMILIHAN
-    if (button.hasAttribute("data-activate")) {
-      const electionId = button.dataset.activate;
-      button.disabled = true;
-      const oldText = button.textContent;
-      button.textContent = "Mengaktifkan…";
-      try {
-        const [candidateResult, tokenResult] = await Promise.all([
-          supabase.from("candidates").select("id", { count: "exact", head: true }).eq("election_id", electionId),
-          supabase.from("voter_tokens").select("id", { count: "exact", head: true }).eq("election_id", electionId)
-        ]);
-        if (candidateResult.error) throw candidateResult.error;
-        if (tokenResult.error) throw tokenResult.error;
-        if ((candidateResult.count || 0) < 2) throw new Error("Tambahkan minimal 2 kandidat terlebih dahulu.");
-        if ((tokenResult.count || 0) < 1) throw new Error("Buat token pemilih terlebih dahulu.");
-        if (!confirm("Aktifkan pemilihan ini? Pastikan kandidat, token, dan jadwal sudah benar.")) return;
-
-        const { data, error } = await supabase.rpc("activate_election", { p_election_id: electionId });
-        if (error) throw error;
-        if (data === false) throw new Error("Database tidak mengonfirmasi aktivasi.");
-        const { data: verified, error: verifyError } = await supabase
-          .from("elections").select("status").eq("id", electionId).single();
-        if (verifyError) throw verifyError;
-        if (String(verified?.status).toLowerCase() !== "active") {
-          throw new Error("Status pemilihan belum berubah menjadi active di database.");
-        }
-        await openElections();
-        alert("Pemilihan berhasil diaktifkan.");
-      } catch (error) {
-        fail("Aktivasi gagal", error);
-      } finally {
-        if (button.isConnected) { button.disabled = false; button.textContent = oldText; }
-      }
-      return;
-    }
-
-    // 2. NONAKTIFKAN PEMILIHAN
-    if (button.hasAttribute("data-deactivate")) {
-      const electionId = button.dataset.deactivate;
-      if (!confirm("Nonaktifkan pemilihan ini? Pemungutan suara akan dihentikan dan hasil dikunci.")) return;
-      button.disabled = true;
-      const oldText = button.textContent;
-      button.textContent = "Memproses…";
-      try {
-        const { error } = await supabase.rpc("deactivate_election", { p_election_id: electionId });
-        if (error) throw error;
-        const { data, error: verifyError } = await supabase
-          .from("elections").select("status,results_locked").eq("id", electionId).single();
-        if (verifyError) throw verifyError;
-        if (String(data?.status).toLowerCase() === "active") throw new Error("Pemilihan masih berstatus active.");
-        if (data?.results_locked !== true) throw new Error("Pemilihan nonaktif tetapi hasil belum terkunci.");
-        await openElections();
-        alert("Pemilihan berhasil dinonaktifkan.");
-      } catch (error) {
-        fail("Gagal menonaktifkan", error);
-      } finally {
-        if (button.isConnected) { button.disabled = false; button.textContent = oldText; }
-      }
-      return;
-    }
-
-    // 3. HAPUS PEMILIHAN
-    if (button.hasAttribute("data-remove")) {
-      const electionId = button.dataset.remove;
-      if (!confirm("Hapus pemilihan ini? Database hanya mengizinkan penghapusan sesuai aturan data suara.")) return;
-      button.disabled = true;
-      const oldText = button.textContent;
-      button.textContent = "Menghapus…";
-      try {
-        const { error } = await supabase.rpc("delete_election_safe", { p_election_id: electionId });
-        if (error) throw error;
-        const { data, error: verifyError } = await supabase
-          .from("elections").select("id").eq("id", electionId).maybeSingle();
-        if (verifyError) throw verifyError;
-        if (data) throw new Error("Data pemilihan masih ada di database.");
-        await openElections();
-        alert("Pemilihan berhasil dihapus.");
-      } catch (error) {
-        fail("Gagal menghapus pemilihan", error);
-      } finally {
-        if (button.isConnected) { button.disabled = false; button.textContent = oldText; }
-      }
-      return;
-    }
-
-    // 4. HAPUS KANDIDAT
-    if (button.hasAttribute("data-delete-candidate")) {
-      const candidateId = button.dataset.deleteCandidate;
-      if (!confirm("Hapus kandidat ini? Penghapusan dapat ditolak jika kandidat sudah memiliki suara.")) return;
-      button.disabled = true;
-      try {
-        const { data, error } = await supabase.from("candidates")
-          .delete().eq("id", candidateId).eq("election_id", activeElectionId).select("id");
-        if (error) throw error;
-        if (!Array.isArray(data) || data.length === 0) {
-          throw new Error("Kandidat tidak terhapus. Periksa hak akses atau apakah kandidat sudah memiliki suara.");
-        }
-        await openCandidates();
-      } catch (error) {
-        fail("Gagal menghapus kandidat", error);
-        if (button.isConnected) button.disabled = false;
-      }
-      return;
-    }
-
-    // 5. RESET SUARA & TOKEN
-    if (button.id === "v21ResetElection") {
-      const select = document.getElementById("v21ElectionSelect");
-      const message = document.getElementById("v21AdminResetMessage");
-      const electionId = select?.value;
-      if (!electionId) {
-        if (message) message.textContent = "Pilih pemilihan terlebih dahulu.";
-        return;
-      }
-      const answer = prompt("Reset suara dan penggunaan token? Kandidat dan token tetap dipertahankan. Ketik RESET");
-      if (answer !== "RESET") return;
-      button.disabled = true;
-      if (message) message.textContent = "Memproses reset…";
-      try {
-        const { error } = await supabase.rpc("reset_election_data", {
-          p_election_id: electionId,
-          p_confirmation: answer
-        });
-        if (error) throw error;
-        if (message) message.textContent = "Reset berhasil. Suara dihapus dan penggunaan token dikembalikan ke nol.";
-        if (typeof openElections === "function") await openElections();
-      } catch (error) {
-        if (message) message.textContent = `Reset gagal: ${error?.message || String(error)}`;
-      } finally {
-        if (button.isConnected) button.disabled = false;
-      }
-    }
-  }, true);
-
-  // Pastikan hanya tombol operasional terkait yang menerima klik.
-  const style = document.createElement("style");
-  style.id = "ev-election-action-click-fix-style";
-  style.textContent = `
-    #adminView [data-activate], #adminView [data-deactivate],
-    #adminView [data-remove], #adminView [data-delete-candidate],
-    #v21ResetElection {
-      pointer-events:auto !important;
-      cursor:pointer !important;
-      position:relative;
-      z-index:5;
-    }
-  `;
-  document.head.appendChild(style);
 })();
