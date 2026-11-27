@@ -1,3 +1,4 @@
+/* EVOTING_RESET_DIAGNOSTIC_V3: improved Supabase error display */
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../config/supabase.js";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -196,7 +197,7 @@ async function loadOrganizations(){
             if(data.failed_accounts?.length)msg.textContent+=` Ada ${data.failed_accounts.length} akun Admin yang belum terhapus; jalankan retry.`;
             if(currentOrgId===org.organization_id){activeElectionId="";activeElectionStatus="";}
             await loadOrganizations();await loadPublicOrganizations();
-          }catch(err){msg.textContent="Reset gagal: "+(err?.message||String(err));}
+          }catch(err){msg.textContent="Reset gagal: "+v21FormatError(err);console.error("E-VOTING organization reset error:",err);}
           finally{reset.disabled=false;}
         });
         del.addEventListener("click",async ev=>{
@@ -396,7 +397,6 @@ async function openElections(){
             <button type="button" class="ev-portal-qr" data-portal-qr="${esc(x.id)}">▦ QR Code</button>`:""}
           <button type="button" class="ev-remove" data-remove="${esc(x.id)}">Hapus</button>
         </div>
-        <p class="ev-inline-message" data-election-message role="status" aria-live="polite"></p>
       </article>`;
     }).join(""):`<div class="ev-empty">Belum ada pemilihan. Buat pemilihan pertama untuk memulai.</div>`;
     showView("Data Pemilihan",`
@@ -485,31 +485,20 @@ async function openElections(){
         alert("Pemilihan berhasil dinonaktifkan. Hasil tetap tersimpan dan terkunci.");
       }catch(err){alert("Gagal menonaktifkan: "+err.message);b.disabled=false;b.textContent="Ⅱ Nonaktifkan";}
     });
-    view.querySelectorAll("[data-remove]").forEach(b=>{
-      b.onclick=async(ev)=>{
-        ev.preventDefault();ev.stopPropagation();
-        if(b.dataset.busy==="1")return;
-        const id=b.dataset.remove, election=rows.find(x=>x.id===id);
-        const card=b.closest(".ev-election-card");
-        const status=card?.querySelector("[data-election-message]");
-        const say=t=>{if(status)status.textContent=t;};
-        if(!id){say("Gagal: ID pemilihan tidak ditemukan.");return;}
-        if(!confirm(`Hapus pemilihan "${election?.title||""}"? Penghapusan hanya diizinkan jika belum ada suara. Data kandidat dan token terkait juga akan terhapus.`))return;
-        b.dataset.busy="1";b.disabled=true;b.textContent="Menghapus…";say("Sedang menghapus pemilihan…");
-        try{
-          const {data,error}=await supabase.rpc("delete_election_safe",{p_election_id:id});
-          if(error)throw error;
-          if(data!==true)throw new Error("Database tidak mengembalikan konfirmasi TRUE.");
-          const {data:remaining,error:verifyError}=await supabase.from("elections").select("id").eq("id",id).maybeSingle();
-          if(verifyError)throw verifyError;
-          if(remaining)throw new Error("Pemilihan masih ada di database. Periksa hak akses atau fungsi delete_election_safe.");
-          say("Pemilihan berhasil dihapus.");
-          await openElections();
-        }catch(err){
-          say("Gagal menghapus: "+(err?.message||String(err)));
-          b.dataset.busy="0";b.disabled=false;b.textContent="Hapus";
-        }
-      };
+    view.querySelectorAll("[data-remove]").forEach(b=>b.onclick=async()=>{
+      const id=b.dataset.remove, election=rows.find(x=>x.id===id);
+      if(!confirm(`Hapus pemilihan "${election?.title||""}"? Penghapusan hanya diizinkan jika belum ada suara. Data kandidat dan token terkait juga akan terhapus.`))return;
+      b.disabled=true;b.textContent="Menghapus…";
+      try{
+        const {error}=await supabase.rpc("delete_election_safe",{p_election_id:id});
+        if(error)throw error;
+        const {data:remaining,error:verifyError}=await supabase.from("elections")
+          .select("id").eq("id",id).maybeSingle();
+        if(verifyError)throw verifyError;
+        if(remaining)throw new Error("Data pemilihan masih ada di database; penghapusan belum selesai.");
+        await openElections();
+        alert("Pemilihan berhasil dihapus.");
+      }catch(err){alert("Tidak dapat menghapus pemilihan: "+err.message);b.disabled=false;b.textContent="Hapus";}
     });
     const portalUrl=id=>`${window.location.origin}${window.location.pathname}?vote=${encodeURIComponent(id)}`;
     view.querySelectorAll("[data-portal-open]").forEach(b=>b.onclick=()=>{
@@ -1584,6 +1573,22 @@ window.openBackupCenter = async function(){
 }
 
 
+// Uraikan error Supabase/API agar tidak tampil sebagai [object Object].
+function v21FormatError(err){
+  if(err == null) return "Kesalahan tidak diketahui";
+  if(typeof err === "string") return err;
+  const fields = ["message", "details", "hint", "code", "status", "statusText"];
+  const parts = [];
+  for(const key of fields){
+    const value = err[key];
+    if(value !== undefined && value !== null && value !== "")
+      parts.push(key + ": " + (typeof value === "string" ? value : JSON.stringify(value)));
+  }
+  if(err.context && typeof err.context.text === "function") parts.push("context: respons server tersedia di Console/Network");
+  if(parts.length) return parts.join(" | ");
+  try { return JSON.stringify(err); } catch (_) { return String(err); }
+}
+
 // ============================================================
 // E-VOTING PRO V2.1 UI CONTROLS
 // ============================================================
@@ -1626,33 +1631,23 @@ async function renderV21Controls(){
       });
       select.value="";
     }catch(err){select.innerHTML='<option value="">Gagal memuat pemilihan</option>';msg.textContent=err.message;}
-    btn.onclick=async(ev)=>{
-      ev.preventDefault();ev.stopPropagation();
-      if(btn.dataset.busy==="1")return;
-      const electionId=select?.value;
+    btn.onclick=async()=>{
+      const electionId=select.value;
       if(!electionId){msg.textContent="Pilih pemilihan terlebih dahulu.";return;}
-      const answer=prompt("Reset suara dan penggunaan token untuk pemilihan ini? Kandidat dan token tetap dipertahankan. Ketik persis: RESET");
-      if(answer===null)return;
-      if(answer.trim()!=="RESET"){msg.textContent="Reset dibatalkan: konfirmasi harus RESET.";return;}
-      btn.dataset.busy="1";btn.disabled=true;msg.textContent="Mengirim perintah reset ke database…";
+      const answer=prompt("Reset suara dan penggunaan token untuk pemilihan ini? Kandidat dan token tetap dipertahankan. Ketik: RESET");
+      if(answer!=="RESET")return;
+      btn.disabled=true;msg.textContent="Memproses reset…";
       try{
-        const {data,error}=await supabase.rpc("reset_election_data",{p_election_id:electionId,p_confirmation:"RESET"});
+        const {data,error}=await supabase.rpc("reset_election_data",{
+          p_election_id:electionId,
+          p_confirmation:answer
+        });
         if(error)throw error;
-        if(data!==true)throw new Error("Database tidak mengembalikan konfirmasi TRUE.");
-        msg.textContent="Reset berhasil. Memeriksa hasil…";
-        const [{count:voteCount,error:voteError},{data:tokens,error:tokenError}]=await Promise.all([
-          supabase.from("votes").select("id",{count:"exact",head:true}).eq("election_id",electionId),
-          supabase.from("voter_tokens").select("used_count").eq("election_id",electionId)
-        ]);
-        if(voteError)throw voteError;
-        if(tokenError)throw tokenError;
-        const remainingUsed=(tokens||[]).reduce((n,t)=>n+Number(t.used_count||0),0);
-        if((voteCount||0)!==0||remainingUsed!==0)throw new Error(`Reset belum terverifikasi. Suara tersisa: ${voteCount||0}; penggunaan token: ${remainingUsed}.`);
-        msg.textContent="Berhasil: seluruh suara dihapus dan penggunaan token kembali ke 0. Kandidat serta token tetap dipertahankan.";
-        await openElections();
+        msg.textContent="Reset berhasil. Suara dihapus dan penggunaan token dikembalikan ke nol.";
       }catch(err){
-        msg.textContent="Reset gagal: "+(err?.message||String(err));
-      }finally{btn.dataset.busy="0";btn.disabled=false;}
+        msg.textContent="Reset gagal — "+v21FormatError(err);
+        console.error("E-VOTING reset_election_data error:",err);
+      }finally{btn.disabled=false;}
     };
   }
 }
