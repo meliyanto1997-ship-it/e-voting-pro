@@ -1663,39 +1663,45 @@ async function renderV21Controls(){
       });
       select.value="";
     }catch(err){select.innerHTML='<option value="">Gagal memuat pemilihan</option>';msg.textContent=err.message;}
-    btn.onclick=async()=>{
-      const electionId=select.value;
-      if(!electionId){msg.textContent="Pilih pemilihan terlebih dahulu.";return;}
-      const answer=prompt("Reset suara dan penggunaan token untuk pemilihan ini? Kandidat dan token tetap dipertahankan. Ketik: RESET");
-      if(answer!=="RESET")return;
-      btn.disabled=true;msg.textContent="Memproses reset…";
-      try{
-        const {data,error}=await supabase.rpc("reset_election_data",{
-          p_election_id:electionId,
-          p_confirmation:answer
-        });
-        if(error)throw error;
-        msg.textContent="Reset berhasil. Suara dihapus dan penggunaan token dikembalikan ke nol.";
-      }catch(err){
-        const parts=[];
-        const addPart=(label,value)=>{
-          if(value===undefined||value===null||value==="")return;
-          const textValue=typeof value==="string"?value:JSON.stringify(value);
-          if(textValue)parts.push(label+": "+textValue);
-        };
-        if(typeof err==="string")parts.push(err);
-        else{
-          addPart("Pesan",err?.message);
-          addPart("Kode",err?.code);
-          addPart("Detail",err?.details);
-          addPart("Petunjuk",err?.hint);
-          if(!parts.length)addPart("Respons",err);
-        }
-        msg.textContent="Reset gagal — "+(parts.join(" | ")||"Kesalahan tidak diketahui");
-        console.error("E-VOTING reset_election_data error:",err);
-      }finally{btn.disabled=false;}
-    };
+
   }
+}
+
+
+// Reset pemilihan: delegasi klik agar tetap aktif walau panel dibuat dinamis.
+if(!window.__v21ResetClickBound){
+  window.__v21ResetClickBound=true;
+  document.addEventListener("click",async(event)=>{
+    const button=event.target.closest("#v21ResetElection");
+    if(!button)return;
+    event.preventDefault();
+    event.stopPropagation();
+    const select=document.getElementById("v21ElectionSelect");
+    const msg=document.getElementById("v21AdminResetMessage");
+    if(!select||!msg)return;
+    const electionId=select.value;
+    if(!electionId){msg.textContent="Pilih pemilihan terlebih dahulu.";return;}
+    const answer=window.prompt("Reset suara dan penggunaan token untuk pemilihan ini? Kandidat dan token tetap dipertahankan. Ketik: RESET");
+    if(answer!=="RESET")return;
+    button.disabled=true;
+    msg.textContent="Memproses reset…";
+    try{
+      const {error}=await supabase.rpc("reset_election_data",{
+        p_election_id:electionId,
+        p_confirmation:answer
+      });
+      if(error)throw error;
+      msg.textContent="Reset berhasil. Suara dihapus dan penggunaan token dikembalikan ke nol.";
+    }catch(err){
+      const parts=[];
+      if(err?.message)parts.push("Pesan: "+err.message);
+      if(err?.code)parts.push("Kode: "+err.code);
+      if(err?.details)parts.push("Detail: "+err.details);
+      if(err?.hint)parts.push("Petunjuk: "+err.hint);
+      msg.textContent="Reset gagal — "+(parts.join(" | ")||String(err));
+      console.error("E-VOTING reset_election_data error:",err);
+    }finally{button.disabled=false;}
+  },true);
 }
 
 // Motif batik pias: ornamen geometris sangat lembut, tidak mengganggu keterbacaan.
@@ -1712,6 +1718,7 @@ async function renderV21Controls(){
       background-size:72px 72px,72px 72px,84px 84px;
       background-position:0 0,36px 36px,0 0}
     .v21-control-panel{margin:16px 0!important;border:1px solid var(--line,#263c58)!important}
+    #v21AdminReset,#v21AdminReset *{pointer-events:auto!important}#v21AdminReset{position:relative!important;z-index:30!important}#v21ResetElection{position:relative!important;z-index:31!important;cursor:pointer!important}
     .v21-control-panel h3{color:var(--a,#20d5e8)}
     .v21-control-panel p,.v21-note{font-size:13px;color:var(--muted,#9aadc5)}
     .v21-control-panel select{width:100%;margin:8px 0 12px;padding:12px;border-radius:10px}
