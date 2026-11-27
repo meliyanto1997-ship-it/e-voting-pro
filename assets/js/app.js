@@ -1,4 +1,3 @@
-/* EVOTING_RESET_DIAGNOSTIC_V3: improved Supabase error display */
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../config/supabase.js";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -197,7 +196,7 @@ async function loadOrganizations(){
             if(data.failed_accounts?.length)msg.textContent+=` Ada ${data.failed_accounts.length} akun Admin yang belum terhapus; jalankan retry.`;
             if(currentOrgId===org.organization_id){activeElectionId="";activeElectionStatus="";}
             await loadOrganizations();await loadPublicOrganizations();
-          }catch(err){msg.textContent="Reset gagal: "+v21FormatError(err);console.error("E-VOTING organization reset error:",err);}
+          }catch(err){msg.textContent="Reset gagal: "+(err?.message||String(err));}
           finally{reset.disabled=false;}
         });
         del.addEventListener("click",async ev=>{
@@ -876,8 +875,40 @@ if (leaderboardElectionId) {
     .lb-head{display:flex;justify-content:space-between;align-items:center;gap:14px;border-bottom:1px solid #ffffff22;padding:4px 2px 18px;margin-bottom:22px}.lb-brand{display:flex;align-items:center;gap:12px}.lb-logo{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,#06b6d4,#2563eb);font-size:22px;box-shadow:0 8px 28px #0891b255}.lb-brand b{font-size:17px;letter-spacing:.8px}
     .lb-kicker{color:#35d9ee;font-size:10px;font-weight:900;letter-spacing:2.2px;text-transform:uppercase}.lb-muted{color:#a9bfd5}.lb-live-state{display:inline-flex;align-items:center;gap:8px;border:1px solid #176c59;background:#07372f88;color:#7ef2c5;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800}.lb-live-dot{width:8px;height:8px;border-radius:50%;background:#34e5a1;box-shadow:0 0 0 0 #34e5a177;animation:lbLivePulse 1.6s infinite}@keyframes lbLivePulse{70%{box-shadow:0 0 0 9px #34e5a100}100%{box-shadow:0 0 0 0 #34e5a100}}
     .lb-card{background:linear-gradient(145deg,#112840f5,#09192bf5);border:1px solid #4d8ebe55;border-radius:22px;padding:clamp(17px,3vw,27px);margin:16px 0;box-shadow:0 18px 55px #0003}.lb-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:1fr auto;align-items:center;gap:18px;background:linear-gradient(120deg,#0c3850,#102b49 58%,#282451);border-color:#247e9b}.lb-title{font-size:clamp(23px,4vw,36px);line-height:1.12;margin:9px 0 8px;letter-spacing:-.8px}.lb-total-box{text-align:right;position:relative;z-index:1}.lb-total{font-size:clamp(32px,5vw,48px);font-weight:950;line-height:1;color:#65e7f4;font-variant-numeric:tabular-nums;text-shadow:0 0 25px #22d3ee44}.lb-total-label{font-size:11px;color:#b6d3e8;margin-top:7px;letter-spacing:1px;text-transform:uppercase}.lb-update{display:flex;align-items:center;gap:7px;color:#a9bfd5;font-size:12px;margin-top:14px}.lb-update-dot{width:6px;height:6px;background:#38d9a4;border-radius:50%}
-    .lb-section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin-bottom:8px}.lb-section-head h2{margin:5px 0 0;font-size:21px}.lb-row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:14px;align-items:center;padding:17px 0;border-bottom:1px solid #5383ab33;transition:background .25s}.lb-row:last-child{border:0}.lb-row.is-leader{margin:0 -10px;padding:18px 10px;border-radius:15px;background:linear-gradient(90deg,#0c665333,transparent 90%)}.lb-rank{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#173652;color:#bcecff;font-weight:950;font-size:17px;border:1px solid #315879}.lb-row.is-leader .lb-rank{background:linear-gradient(135deg,#e7b94c,#f97316);color:#241604;border:0;box-shadow:0 6px 20px #f59e0b33}.lb-name{font-weight:850;font-size:clamp(14px,2vw,17px);overflow-wrap:anywhere}.lb-sub{font-size:12px;color:#9fb7cd;margin-top:4px}.lb-stats{text-align:right;min-width:116px}.lb-votes{font-size:18px;font-weight:950;font-variant-numeric:tabular-nums}.lb-pct{font-size:12px;color:#a9bfd5;margin-top:3px}.lb-trend{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:900}.lb-trend.up{color:#75f2c0;background:#0b493b}.lb-trend.down{color:#ff9b9b;background:#54242b}.lb-trend.same{color:#a9bfd5;background:#1a3046}.lb-track{height:11px;background:#142d45;border:1px solid #294d6b;border-radius:99px;overflow:hidden;margin-top:12px;grid-column:2/4}.lb-bar{height:100%;width:0;background:linear-gradient(90deg,#0891b2,#22d3ee 55%,#a3e635);border-radius:99px;transition:width 1s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 16px #22d3ee55}.lb-row.is-leader .lb-bar{background:linear-gradient(90deg,#f59e0b,#fde68a)}.lb-row.vote-up .lb-votes{animation:lbCountUp .85s ease}.lb-row.vote-down .lb-votes{animation:lbCountDown .85s ease}.lb-row.rank-up{animation:lbRankUp .9s ease}.lb-row.rank-down{animation:lbRankDown .9s ease}@keyframes lbCountUp{0%{color:#fff}35%{color:#5df2b7;transform:scale(1.2)}100%{color:inherit;transform:scale(1)}}@keyframes lbCountDown{0%{color:#fff}35%{color:#ff8585;transform:scale(.94)}100%{color:inherit;transform:scale(1)}}@keyframes lbRankUp{40%{background:#0c765044;transform:translateY(-4px)}}@keyframes lbRankDown{40%{background:#8b303044;transform:translateY(3px)}}
-    .lb-empty{text-align:center;padding:38px 12px;color:#9fb7cd}.lb-foot{text-align:center;color:#7894ad;font-size:11px;padding:20px 8px 8px}@media(max-width:620px){#publicLeaderboard{padding:12px}.lb-hero{grid-template-columns:1fr}.lb-total-box{text-align:left}.lb-row{grid-template-columns:38px minmax(0,1fr) auto;gap:9px;padding:14px 0}.lb-rank{width:34px;height:34px}.lb-stats{min-width:82px}.lb-votes{font-size:15px}.lb-track{grid-column:2/4}.lb-name{font-size:14px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+    .lb-section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin-bottom:14px}.lb-section-head h2{margin:5px 0 0;font-size:21px}
+    .lb-top3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0 22px;align-items:stretch}
+    .lb-top-card{position:relative;overflow:hidden;min-width:0;background:linear-gradient(155deg,#153650,#0a1c30);border:1px solid #4d8ebe66;border-radius:18px;padding:16px;text-align:center;box-shadow:0 14px 36px #0003;transition:transform .35s,border-color .35s}
+    .lb-top-card.rank-1{border-color:#e9bd58;box-shadow:0 12px 36px #e9bd581c}.lb-top-card.rank-2{border-color:#9db6cc}.lb-top-card.rank-3{border-color:#bd865e}
+    .lb-top-card.vote-up{animation:lbPodiumUp .9s ease}.lb-top-card.vote-down{animation:lbPodiumDown .9s ease}
+    @keyframes lbPodiumUp{35%{transform:translateY(-6px);box-shadow:0 0 28px #42e6ac55}}@keyframes lbPodiumDown{35%{transform:translateY(3px);box-shadow:0 0 24px #ff777744}}
+    .lb-top-rank{font-size:12px;font-weight:950;letter-spacing:1.5px;color:#f7d889;margin-bottom:10px}
+    .lb-top-photo{width:clamp(90px,13vw,150px);height:clamp(90px,13vw,150px);object-fit:cover;object-position:center;border-radius:18px;border:2px solid #ffffff30;background:#0a1a2a;box-shadow:0 8px 24px #0004}
+    .lb-photo-empty{display:inline-grid;place-items:center;color:#9db7cd;font-size:12px;font-weight:800}
+    .lb-top-name{font-size:clamp(14px,1.7vw,19px);font-weight:900;line-height:1.25;margin:12px 0 5px;overflow-wrap:anywhere}
+    .lb-top-number{font-size:11px;color:#a9bfd5}.lb-top-votes{font-size:clamp(23px,3vw,32px);font-weight:950;color:#75e8f5;font-variant-numeric:tabular-nums;margin-top:12px}.lb-top-pct{font-size:12px;color:#b5c9da;margin-top:2px}
+    .lb-chart{margin-top:14px;text-align:left}.lb-chart-label{display:flex;justify-content:space-between;gap:8px;color:#a9bfd5;font-size:10px;margin-bottom:6px}.lb-chart-track{height:12px;border-radius:99px;background:#091a2b;border:1px solid #31516b;overflow:hidden}.lb-chart-fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#0891b2,#22d3ee 55%,#a3e635);transition:width 1s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 14px #22d3ee66}
+    .lb-top-card.rank-1 .lb-chart-fill{background:linear-gradient(90deg,#d69a27,#ffe28a)}.lb-top-card.rank-2 .lb-chart-fill{background:linear-gradient(90deg,#8299ad,#d9e5ee)}.lb-top-card.rank-3 .lb-chart-fill{background:linear-gradient(90deg,#9a6546,#e6b18b)}
+
+    .lb-podium-chart{margin:18px 0 8px;padding:16px 14px 12px;border:1px solid #31516b;border-radius:16px;background:linear-gradient(180deg,#102b43,#0a1d30)}
+    .lb-podium-chart h3{font-size:14px;margin:0 0 16px;color:#d7efff}
+    .lb-bars{height:190px;display:flex;align-items:end;justify-content:space-around;gap:18px;border-bottom:1px solid #52718a;padding:0 8px}
+    .lb-bar-column{height:100%;flex:1;max-width:180px;display:flex;flex-direction:column;align-items:center;justify-content:end;gap:7px;min-width:0}
+    .lb-bar-value{font-size:12px;font-weight:950;color:#e8f7ff;font-variant-numeric:tabular-nums}
+    .lb-bar-track{height:132px;width:min(58px,65%);display:flex;align-items:end;justify-content:center;background:#091a2b;border-radius:12px 12px 4px 4px;overflow:hidden;border:1px solid #31516b}
+    .lb-bar-fill{width:100%;height:0;border-radius:10px 10px 2px 2px;transition:height 1.1s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 18px #22d3ee55}
+    .lb-bar-fill.rank-1{background:linear-gradient(0deg,#b7791f,#ffe28a)}.lb-bar-fill.rank-2{background:linear-gradient(0deg,#647b91,#d9e5ee)}.lb-bar-fill.rank-3{background:linear-gradient(0deg,#925b3c,#e6b18b)}
+    .lb-bar-name{font-size:11px;font-weight:850;color:#d4e8f8;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .lb-bar-change{font-size:10px;font-weight:900;min-height:16px}.lb-bar-change.up{color:#75f2c0}.lb-bar-change.down{color:#ff9b9b}.lb-bar-change.same{color:#a9bfd5}
+    @media(max-width:620px){.lb-podium-chart{padding:12px 8px}.lb-bars{height:170px;gap:8px}.lb-bar-track{height:115px;width:48px}.lb-bar-name{font-size:10px}}
+
+    .lb-lower-list{margin-top:8px}.lb-lower-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid #5383ab33;transition:background .25s}.lb-lower-row:last-child{border:0}.lb-lower-row.vote-up{animation:lbCountUp .85s ease}.lb-lower-row.vote-down{animation:lbCountDown .85s ease}.lb-lower-rank{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#173652;color:#bcecff;font-weight:900}.lb-lower-name{font-weight:800;font-size:14px;overflow-wrap:anywhere}.lb-lower-votes{font-weight:950;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;color:#d8f4ff}
+    .lb-trend{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:900}.lb-trend.up{color:#75f2c0;background:#0b493b}.lb-trend.down{color:#ff9b9b;background:#54242b}.lb-trend.same{color:#a9bfd5;background:#1a3046}
+    .lb-empty{text-align:center;padding:38px 12px;color:#9fb7cd}.lb-foot{text-align:center;color:#7894ad;font-size:11px;padding:20px 8px 8px}
+    @media(max-width:760px){.lb-top3{grid-template-columns:1fr;max-width:520px;margin:16px auto}.lb-top-card{display:grid;grid-template-columns:88px minmax(0,1fr);column-gap:14px;text-align:left;align-items:center;padding:13px}.lb-top-rank{grid-column:1/-1;margin:0 0 8px}.lb-top-photo{grid-row:2/6;width:82px;height:82px;border-radius:14px}.lb-top-name{margin:0 0 4px}.lb-top-votes{font-size:23px;margin-top:5px}.lb-top-pct{margin:0}.lb-chart{grid-column:1/-1}.lb-lower-row{grid-template-columns:36px minmax(0,1fr) auto;gap:8px}}
+    @media(max-width:620px){#publicLeaderboard{padding:12px}.lb-hero{grid-template-columns:1fr}.lb-total-box{text-align:left}.lb-title{font-size:25px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
   `;
   document.head.appendChild(boardStyle);document.body.classList.add("board-mode");
   const boardRoot=document.createElement("main");boardRoot.id="publicLeaderboard";document.body.appendChild(boardRoot);
@@ -889,20 +920,37 @@ if (leaderboardElectionId) {
       const {data:info,error:infoError}=await supabase.rpc("get_public_election",{p_election_id:leaderboardElectionId});if(infoError)throw infoError;
       const election=Array.isArray(info)?info[0]:info;if(!election?.id)throw new Error("Pemilihan tidak ditemukan atau tidak aktif.");
       const {data:rows,error}=await supabase.rpc("get_public_live_results",{p_election_id:leaderboardElectionId});if(error)throw error;
-      const records=(Array.isArray(rows)?rows:[]).map(r=>({id:String(r.candidate_id||r.id||`${r.candidate_number}-${r.candidate_name}`),number:r.candidate_number,name:r.candidate_name,votes:Number(r.vote_count||0),total:Number(r.total_votes||0),pct:Number(r.vote_percentage||0)})).sort((a,b)=>b.votes-a.votes||(Number.parseInt(a.number,10)||0)-(Number.parseInt(b.number,10)||0)||String(a.name).localeCompare(String(b.name),"id"));
+      const photoMap=new Map();
+      try{
+        const {data:photos}=await supabase.from("candidates").select("id,photo_url").eq("election_id",leaderboardElectionId);
+        (photos||[]).forEach(c=>{if(c.photo_url)photoMap.set(String(c.id),c.photo_url);});
+      }catch(_photoError){/* Foto opsional; leaderboard tetap tampil bila akses foto dibatasi. */}
+      const records=(Array.isArray(rows)?rows:[]).map(r=>({id:String(r.candidate_id||r.id||`${r.candidate_number}-${r.candidate_name}`),number:r.candidate_number,name:r.candidate_name,votes:Number(r.vote_count||0),total:Number(r.total_votes||0),pct:Number(r.vote_percentage||0),photo:photoMap.get(String(r.candidate_id||r.id||""))||r.photo_url||""})).sort((a,b)=>b.votes-a.votes||(Number.parseInt(a.number,10)||0)-(Number.parseInt(b.number,10)||0)||String(a.name).localeCompare(String(b.name),"id"));
       const total=records.length?Number(records[0].total||records.reduce((s,r)=>s+r.votes,0)):0;
       const now=new Date().toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
       const previousTotal=boardPrevious.size?[...boardPrevious.values()].reduce((s,r)=>s+r.votes,0):total;
       const totalChanged=total!==previousTotal;
-      const rowsHtml=records.map((r,i)=>{
-        const old=boardPrevious.get(r.id);const oldRank=old?.rank??i+1;const rank=i+1;
-        const delta=old?r.votes-old.votes:0;const rankDelta=old?oldRank-rank:0;
-        const trend=delta>0?`<span class="lb-trend up">▲ +${delta.toLocaleString("id-ID")} suara</span>`:delta<0?`<span class="lb-trend down">▼ ${delta.toLocaleString("id-ID")} suara</span>`:`<span class="lb-trend same">${boardFirstRender?"POSISI AWAL":"TETAP"}</span>`;
-        const motion=!boardFirstRender&&delta>0?"vote-up":!boardFirstRender&&delta<0?"vote-down":!boardFirstRender&&rankDelta>0?"rank-up":!boardFirstRender&&rankDelta<0?"rank-down":"";
-        const pct=Number.isFinite(r.pct)?r.pct:(total?r.votes/total*100:0);
-        return `<article class="lb-row ${i===0&&total>0?"is-leader":""} ${motion}" data-candidate="${boardEsc(r.id)}"><div class="lb-rank">${rank===1?"♛":String(rank).padStart(2,"0")}</div><div><div class="lb-name">${boardEsc(r.name)}</div><div class="lb-sub">Nomor urut ${boardEsc(r.number??"-")}</div>${trend}<div class="lb-track"><div class="lb-bar" style="width:${Math.max(0,Math.min(100,pct))}%"></div></div></div><div class="lb-stats"><div class="lb-votes">${r.votes.toLocaleString("id-ID")}</div><div class="lb-pct">${pct.toFixed(2)}%</div>${rankDelta>0?`<div class="lb-trend up">▲ Naik ${rankDelta}</div>`:rankDelta<0?`<div class="lb-trend down">▼ Turun ${Math.abs(rankDelta)}</div>`:""}</div></article>`;
+      const ranked=records.map((r,i)=>({...r,rank:i+1,pct:Number.isFinite(r.pct)?r.pct:(total?r.votes/total*100:0)}));
+      const topHtml=ranked.slice(0,3).map(r=>{
+        const old=boardPrevious.get(r.id),delta=old?r.votes-old.votes:0;
+        const motion=!boardFirstRender&&delta>0?"vote-up":!boardFirstRender&&delta<0?"vote-down":"";
+        const photo=r.photo?`<img class="lb-top-photo" src="${boardEsc(r.photo)}" alt="Foto ${boardEsc(r.name)}" loading="eager">`:`<div class="lb-top-photo lb-photo-empty">FOTO KANDIDAT</div>`;
+        return `<article class="lb-top-card rank-${r.rank} ${motion}"><div class="lb-top-rank">${r.rank===1?"JUARA 1":r.rank===2?"JUARA 2":"JUARA 3"}</div>${photo}<div><div class="lb-top-name">${boardEsc(r.name)}</div><div class="lb-top-number">Nomor urut ${boardEsc(r.number??"-")}</div><div class="lb-top-votes">${r.votes.toLocaleString("id-ID")} suara</div><div class="lb-top-pct">${r.pct.toFixed(2)}% dari total suara</div><div class="lb-chart"><div class="lb-chart-label"><span>Grafik perolehan</span><b>${r.pct.toFixed(2)}%</b></div><div class="lb-chart-track"><div class="lb-chart-fill" style="width:${Math.max(0,Math.min(100,r.pct))}%"></div></div></div></div></article>`;
       }).join("");
-      boardRoot.innerHTML=`<div class="lb-shell"><header class="lb-head"><div class="lb-brand"><div class="lb-logo">◈</div><div><b>E-VOTING PRO</b><div class="lb-kicker">LIVE LEADERBOARD</div></div></div><span class="lb-live-state"><i class="lb-live-dot"></i> LIVE</span></header><section class="lb-card lb-hero"><div><div class="lb-kicker">PAPAN PERINGKAT PUBLIK</div><h1 class="lb-title">${boardEsc(election.title||"Hasil Pemilihan")}</h1><div class="lb-muted">${boardEsc(election.academic_period||"Rekapitulasi suara")}</div><div class="lb-update"><i class="lb-update-dot"></i> Pembaruan otomatis setiap 5 detik · ${now}</div></div><div class="lb-total-box"><div class="lb-total">${total.toLocaleString("id-ID")}</div><div class="lb-total-label">Total suara masuk</div>${totalChanged&&!boardFirstRender?(total>previousTotal?`<span class="lb-trend up">▲ Suara bertambah</span>`:`<span class="lb-trend down">▼ Total suara berkurang</span>`):""}</div></section><section class="lb-card"><div class="lb-section-head"><div><div class="lb-kicker">PERINGKAT TERKINI</div><h2>Perolehan Kandidat</h2></div><span class="lb-muted">${records.length} kandidat</span></div>${rowsHtml||`<div class="lb-empty">Belum ada suara masuk.</div>`}</section><div class="lb-foot">Data diperbarui otomatis · © ${new Date().getFullYear()} E-VOTING PRO · @Mr.Mey</div></div>`;
+      const maxTopVotes=Math.max(1,...ranked.slice(0,3).map(r=>r.votes));
+      const topChartHtml=ranked.slice(0,3).map(r=>{
+        const old=boardPrevious.get(r.id),delta=old?r.votes-old.votes:0;
+        const changeClass=delta>0?"up":delta<0?"down":"same";
+        const changeLabel=boardFirstRender?"—":delta>0?`▲ +${delta.toLocaleString("id-ID")}`:delta<0?`▼ ${delta.toLocaleString("id-ID")}`:"• Tetap";
+        const height=Math.max(r.votes>0?3:0,Math.round(r.votes/maxTopVotes*100));
+        return `<div class="lb-bar-column"><div class="lb-bar-value">${r.votes.toLocaleString("id-ID")}</div><div class="lb-bar-track"><div class="lb-bar-fill rank-${r.rank}" style="height:${height}%"></div></div><div class="lb-bar-name" title="${boardEsc(r.name)}">${boardEsc(r.name)}</div><div class="lb-bar-change ${changeClass}">${changeLabel}</div></div>`;
+      }).join("");
+      const lowerHtml=ranked.slice(3).map(r=>{
+        const old=boardPrevious.get(r.id),delta=old?r.votes-old.votes:0;
+        const motion=!boardFirstRender&&delta>0?"vote-up":!boardFirstRender&&delta<0?"vote-down":"";
+        return `<div class="lb-lower-row ${motion}"><div class="lb-lower-rank">${r.rank}</div><div class="lb-lower-name">${boardEsc(r.name)}</div><div class="lb-lower-votes">${r.votes.toLocaleString("id-ID")} suara</div></div>`;
+      }).join("");
+      boardRoot.innerHTML=`<div class="lb-shell"><header class="lb-head"><div class="lb-brand"><div class="lb-logo">◈</div><div><b>E-VOTING PRO</b><div class="lb-kicker">LIVE LEADERBOARD</div></div></div><span class="lb-live-state"><i class="lb-live-dot"></i> LIVE</span></header><section class="lb-card lb-hero"><div><div class="lb-kicker">PAPAN PERINGKAT PUBLIK</div><h1 class="lb-title">${boardEsc(election.title||"Hasil Pemilihan")}</h1><div class="lb-muted">${boardEsc(election.academic_period||"Rekapitulasi suara")}</div><div class="lb-update"><i class="lb-update-dot"></i> Pembaruan otomatis setiap 5 detik · ${now}</div></div><div class="lb-total-box"><div class="lb-total">${total.toLocaleString("id-ID")}</div><div class="lb-total-label">Total suara masuk</div>${totalChanged&&!boardFirstRender?(total>previousTotal?`<span class="lb-trend up">▲ Suara bertambah</span>`:`<span class="lb-trend down">▼ Total suara berkurang</span>`):""}</div></section><section class="lb-card"><div class="lb-section-head"><div><div class="lb-kicker">PODIUM PEMENANG</div><h2>3 Perolehan Tertinggi</h2></div><span class="lb-muted">${Math.min(3,records.length)} kandidat unggulan</span></div>${topHtml?`<div class="lb-podium-chart"><h3>Grafik batang perolehan 3 besar · perubahan sejak pembaruan terakhir</h3><div class="lb-bars">${topChartHtml}</div></div><div class="lb-top3">${topHtml}</div>`:`<div class="lb-empty">Belum ada kandidat atau suara masuk.</div>`}</section>${lowerHtml?`<section class="lb-card"><div class="lb-section-head"><div><div class="lb-kicker">PERINGKAT SELANJUTNYA</div><h2>Urutan 4 dan seterusnya</h2></div></div><div class="lb-lower-list">${lowerHtml}</div></section>`:""}<div class="lb-foot">Data diperbarui otomatis · © ${new Date().getFullYear()} E-VOTING PRO · @Mr.Mey</div></div>`;
       boardPrevious=new Map(records.map((r,i)=>[r.id,{votes:r.votes,rank:i+1}]));boardFirstRender=false;
     }catch(err){boardRoot.innerHTML=`<div class="lb-shell"><section class="lb-card"><h2>Leaderboard tidak tersedia</h2><p class="lb-muted">${boardEsc(err.message)}</p></section></div>`;if(boardTimer){clearInterval(boardTimer);boardTimer=null;}}
     finally{boardBusy=false;}
@@ -1573,22 +1621,6 @@ window.openBackupCenter = async function(){
 }
 
 
-// Uraikan error Supabase/API agar tidak tampil sebagai [object Object].
-function v21FormatError(err){
-  if(err == null) return "Kesalahan tidak diketahui";
-  if(typeof err === "string") return err;
-  const fields = ["message", "details", "hint", "code", "status", "statusText"];
-  const parts = [];
-  for(const key of fields){
-    const value = err[key];
-    if(value !== undefined && value !== null && value !== "")
-      parts.push(key + ": " + (typeof value === "string" ? value : JSON.stringify(value)));
-  }
-  if(err.context && typeof err.context.text === "function") parts.push("context: respons server tersedia di Console/Network");
-  if(parts.length) return parts.join(" | ");
-  try { return JSON.stringify(err); } catch (_) { return String(err); }
-}
-
 // ============================================================
 // E-VOTING PRO V2.1 UI CONTROLS
 // ============================================================
@@ -1645,7 +1677,21 @@ async function renderV21Controls(){
         if(error)throw error;
         msg.textContent="Reset berhasil. Suara dihapus dan penggunaan token dikembalikan ke nol.";
       }catch(err){
-        msg.textContent="Reset gagal — "+v21FormatError(err);
+        const parts=[];
+        const addPart=(label,value)=>{
+          if(value===undefined||value===null||value==="")return;
+          const textValue=typeof value==="string"?value:JSON.stringify(value);
+          if(textValue)parts.push(label+": "+textValue);
+        };
+        if(typeof err==="string")parts.push(err);
+        else{
+          addPart("Pesan",err?.message);
+          addPart("Kode",err?.code);
+          addPart("Detail",err?.details);
+          addPart("Petunjuk",err?.hint);
+          if(!parts.length)addPart("Respons",err);
+        }
+        msg.textContent="Reset gagal — "+(parts.join(" | ")||"Kesalahan tidak diketahui");
         console.error("E-VOTING reset_election_data error:",err);
       }finally{btn.disabled=false;}
     };
