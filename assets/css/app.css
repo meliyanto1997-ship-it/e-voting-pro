@@ -94,183 +94,38 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
   .ev-report-actions, .ev-lock-actions, .ev-minutes-panel button { display: none !important; }
 }
 
-
-/* =========================================================
-   E-VOTING PRO — VISUAL REDESIGN 2026
-   UI-only layer: keeps existing HTML IDs, JS hooks and flows.
-   ========================================================= */
-:root{
-  --bg:#081321; --panel:#101f33; --panel2:#162a43;
-  --text:#f4f7fc; --muted:#a8b7ca; --line:#2a405b;
-  --a:#e7bd69; --b:#f0d99b;
-  --gold:#e7bd69; --gold-soft:#f5dfa8;
-  --success:#36c995; --danger:#f07178;
-  --shadow:0 18px 48px rgba(0,0,0,.22);
-}
-body{
-  background:
-    radial-gradient(ellipse at 8% -8%,rgba(34,75,111,.55),transparent 38%),
-    radial-gradient(ellipse at 100% 20%,rgba(120,83,42,.12),transparent 34%),
-    var(--bg);
-  color:var(--text); font-family:Inter,"Segoe UI",Arial,sans-serif;
-  letter-spacing:.005em;
-}
-body.light{
-  --bg:#f3f6fb; --panel:#ffffff; --panel2:#f5f7fb;
-  --text:#17263b; --muted:#68788e; --line:#dce4ef;
-  --a:#9a6b1d; --b:#c18a32; --gold:#b9822d; --gold-soft:#f6e8c9;
-  --shadow:0 16px 38px rgba(32,49,74,.09);
-  background:radial-gradient(ellipse at 5% 0%,#e5edf8,transparent 42%),var(--bg);
-}
-.topbar{
-  z-index:100; min-height:76px; padding:12px clamp(18px,5vw,76px);
-  background:rgba(7,17,30,.88); border-bottom:1px solid rgba(231,189,105,.25);
-  box-shadow:0 8px 30px rgba(0,0,0,.12);
-}
-.light .topbar{background:rgba(255,255,255,.9)}
-.brand{gap:13px}
-.mark{
-  width:46px;height:46px;border-radius:15px;
-  background:linear-gradient(145deg,#f4d994,#b77a25);
-  color:#172235;box-shadow:0 7px 20px rgba(231,189,105,.22);
-}
-.brand b{font-size:14px;letter-spacing:1.3px}
-.brand small{font-size:9px;letter-spacing:2.2px}
-.actions{gap:10px}
-#clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
-button{
-  min-height:40px;border-radius:11px;padding:10px 16px;
-  font-family:inherit;font-size:13px;font-weight:700;line-height:1.25; transition:transform .18s ease,box-shadow .18s ease,
-  background .18s ease,border-color .18s ease,filter .18s ease;
-}
-button:hover{transform:translateY(-1px);filter:brightness(1.06)}
-button:active{transform:translateY(0)}
-button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
-  outline:3px solid rgba(231,189,105,.35);outline-offset:2px;
-}
-.primary{
-  color:#1c2634;background:linear-gradient(135deg,#f2d995,#d7a64e);
-  box-shadow:0 7px 18px rgba(198,145,57,.18);
-}
-.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
-.wrap{width:min(1240px,92vw);margin:clamp(24px,4vw,52px) auto}
-.hero{
-  padding:clamp(28px,5vw,64px);border:1px solid rgba(231,189,105,.38);
-  border-radius:28px;box-shadow:var(--shadow);
-  background:linear-gradient(125deg,rgba(18,40,64,.98),rgba(12,26,43,.96));
-}
-.light .hero{background:linear-gradient(125deg,#fff,#f0f4fa)}
-.hero:after{
-  content:"";position:absolute;width:360px;height:360px;right:-130px;top:-190px;
-  border:1px solid rgba(231,189,105,.16);border-radius:50%;
-  box-shadow:0 0 0 28px rgba(231,189,105,.025),0 0 0 58px rgba(231,189,105,.02);
-  pointer-events:none;
-}
-.eyebrow{color:var(--gold);font-size:10px;letter-spacing:2.3px}
-h1{font-size:clamp(36px,6vw,68px);letter-spacing:-2.4px;line-height:1.04}
-h1 em{color:var(--gold-soft)}
-.hero p{max-width:680px;font-size:clamp(14px,1.5vw,17px);line-height:1.8}
-.status{gap:12px;margin-top:30px}
-.status b{color:var(--gold);letter-spacing:.08em}
-.heading{margin:42px 0 17px;align-items:center}
-.heading h2{font-size:clamp(21px,2.5vw,28px);letter-spacing:-.6px}
-.chip,.badge{
-  border-color:rgba(231,189,105,.35);background:rgba(231,189,105,.08);
-  color:var(--gold-soft);font-weight:800;letter-spacing:.08em;
-}
-.light .chip,.light .badge{color:#8b611d}
-.grid{gap:16px}
-.org,.panel{
-  border:1px solid var(--line);border-radius:20px;background:var(--panel);
-  box-shadow:var(--shadow);padding:clamp(20px,2.6vw,30px);
-}
-.org{transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
-.org:hover{border-color:rgba(231,189,105,.55);box-shadow:0 20px 42px rgba(0,0,0,.2)}
-.org h3,.panel h3{font-size:17px;letter-spacing:-.25px}
-.org p,.panel p{line-height:1.7}
-button.menu-card{
-  min-height:128px;border:1px solid rgba(231,189,105,.32)!important;
-  border-radius:18px!important;background:linear-gradient(145deg,#142941,#102036)!important;
-  padding:22px!important;box-shadow:0 12px 28px rgba(0,0,0,.14);
-}
-.light button.menu-card{background:linear-gradient(145deg,#fff,#f3f6fa)!important}
-button.menu-card h3{color:var(--gold-soft)!important;font-size:16px}
-button.menu-card p{color:var(--muted)!important}
-button.menu-card:hover{border-color:var(--gold)!important;background:var(--panel2)!important}
-.features{gap:14px}
-.features div{
-  border:1px solid var(--line);border-radius:16px;background:var(--panel2);
-  padding:20px;min-height:130px;
-}
-.features strong{font-size:12px;color:var(--gold)}
-.features b{font-size:14px}
-.features small{font-size:12px;line-height:1.6}
-input,select,textarea{
-  width:100%;min-height:43px;padding:11px 13px;border:1px solid var(--line);
-  border-radius:11px;background:var(--panel2);color:var(--text);
-  font:inherit;transition:border-color .18s ease,box-shadow .18s ease;
-}
-input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
-label{font-size:12px;font-weight:700;color:var(--muted);margin:15px 0 7px}
-form button{margin-top:12px}
-.modal{z-index:1000;backdrop-filter:blur(9px);background:rgba(2,8,18,.72)}
-.modalbox{
-  border:1px solid rgba(231,189,105,.42);border-radius:23px;
-  box-shadow:0 30px 90px rgba(0,0,0,.4);padding:32px;
-}
-.modalbox h2{letter-spacing:-.7px}
-.close{min-width:38px;min-height:38px}
-#adminView{
-  border-color:rgba(231,189,105,.4);background:var(--panel);
-  border-radius:20px;box-shadow:var(--shadow);padding:clamp(20px,3vw,32px);
-}
-#adminView h3{color:var(--gold-soft)}
-#adminView p{color:var(--muted)}
-#backToDashboard{
-  color:#172235;background:linear-gradient(135deg,#f2d995,#d7a64e);
-  border:0;border-radius:10px;font-weight:800;
-}
-.v21-control-panel{
-  border:1px solid rgba(231,189,105,.45)!important;
-  border-radius:20px!important;background:var(--panel)!important;
-  box-shadow:var(--shadow);padding:clamp(20px,3vw,30px)!important;
-}
-.v21-control-panel h3{color:var(--gold-soft)!important}
-.v21-control-panel button{border-radius:11px}
-.v21-control-panel select{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
-.v21-actions button{min-height:40px}
-#organizationList > *, #superAdminTools > *, #orgAdminTools > *{margin-bottom:15px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left}
-th{color:var(--gold-soft);font-size:11px;text-transform:uppercase;letter-spacing:.07em}
-td{color:var(--text);font-size:13px}
-footer{border-top:1px solid var(--line);margin-top:50px;padding:28px;color:var(--muted)}
-footer b{color:var(--gold)}
-/* Jangan mengubah kemampuan klik elemen dinamis yang sudah ada. */
-#adminPanel,#adminView,#adminView *,#superAdminTools *,#orgAdminTools *,
-.v21-control-panel,.v21-control-panel *{pointer-events:auto}
-@media(max-width:800px){
-  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .features{grid-template-columns:1fr}
-  .wrap{width:min(94vw,680px)}
-}
-@media(max-width:560px){
-  .topbar{padding:10px 4vw;min-height:66px}
-  .mark{width:40px;height:40px}
-  .actions{gap:6px}
-  .actions button{padding:9px 11px;font-size:11px}
-  .grid{grid-template-columns:1fr}
-  .wrap{margin:18px auto}
-  .hero{border-radius:21px}
-  .heading{margin:30px 0 13px}
-  .heading .chip{display:none}
-  .org,.panel{border-radius:17px}
-  .modalbox{padding:25px 20px}
-  .status{flex-wrap:wrap}
-  .status b{margin-left:0;width:100%}
-  th,td{padding:9px 8px;font-size:11px}
-}
-@media(prefers-reduced-motion:reduce){
-  *,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;
-  animation-iteration-count:1!important;transition-duration:.01ms!important}
-}
+/* E-VOTING PRO — Admin workspace redesign; existing IDs/actions preserved */
+:root{--ev-admin-bg:#071321;--ev-admin-surface:#101f33;--ev-admin-surface-2:#172b43;--ev-admin-border:#29415c;--ev-admin-accent:#55d6c2;--ev-admin-gold:#e8bd72;--ev-admin-text:#edf4fb;--ev-admin-muted:#9db0c5}
+body{background:radial-gradient(ellipse at 12% 0%,#173653 0,transparent 38%),var(--ev-admin-bg)!important;color:var(--ev-admin-text)}
+body.light{--ev-admin-bg:#eef3f8;--ev-admin-surface:#fff;--ev-admin-surface-2:#f4f7fb;--ev-admin-border:#d9e2ec;--ev-admin-accent:#087f79;--ev-admin-gold:#a86d20;--ev-admin-text:#17263b;--ev-admin-muted:#64748b}
+.topbar{z-index:100;min-height:72px;padding:12px clamp(16px,4vw,54px);box-shadow:0 8px 28px #02081718}
+.wrap{width:min(1320px,94vw);margin:30px auto}
+#orgAdminTools{max-width:none!important;margin:22px 0 0!important;padding:0!important;display:grid!important;grid-template-columns:minmax(230px,270px) minmax(0,1fr)!important;grid-template-areas:"welcome welcome" "nav branding" "nav utilities" "nav reset";align-items:start;gap:16px!important}
+#orgAdminTools>.org:first-child{grid-area:welcome!important;padding:22px 26px!important;border-radius:18px!important;background:linear-gradient(115deg,var(--ev-admin-surface),var(--ev-admin-surface-2))!important;border:1px solid var(--ev-admin-border)!important;box-shadow:0 12px 30px #02081720}
+#orgAdminTools>.org:first-child h3{font-size:22px!important;color:var(--ev-admin-text)!important}
+#orgAdminTools>.org:first-child p{font-size:13px!important;color:var(--ev-admin-muted)!important}
+#orgAdminTools>.grid{grid-area:nav!important;display:flex!important;flex-direction:column!important;gap:9px!important;padding:14px!important;border-radius:18px!important;background:var(--ev-admin-surface)!important;border:1px solid var(--ev-admin-border)!important;position:sticky;top:90px}
+#orgAdminTools>.grid:before{content:"MENU UTAMA";display:block;padding:3px 8px 9px;color:var(--ev-admin-muted);font-size:10px;font-weight:800;letter-spacing:1.8px}
+#orgAdminTools button.menu-card{display:flex!important;flex-direction:column;justify-content:center;align-items:flex-start;min-height:76px!important;width:100%;padding:13px 14px!important;border-radius:12px!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;animation:none!important;text-align:left!important;transition:all .18s ease!important}
+#orgAdminTools button.menu-card:before{content:"";width:24px;height:3px;border-radius:8px;background:var(--ev-admin-accent);margin-bottom:8px}
+#orgAdminTools button.menu-card h3{font-size:13px!important;margin:0 0 3px!important;color:var(--ev-admin-text)!important}
+#orgAdminTools button.menu-card p{font-size:11px!important;margin:0!important;color:var(--ev-admin-muted)!important}
+#orgAdminTools button.menu-card:hover{background:var(--ev-admin-surface-2)!important;border-color:var(--ev-admin-border)!important;transform:translateX(3px)!important}
+#institutionBranding{grid-area:branding!important;margin:0!important;padding:24px!important;border-radius:18px!important;background:var(--ev-admin-surface)!important;border:1px solid var(--ev-admin-border)!important;box-shadow:0 12px 30px #02081716}
+#institutionBranding h3{font-size:17px!important;color:var(--ev-admin-text)!important}
+#institutionBranding p{color:var(--ev-admin-muted)!important}
+#institutionBranding input{background:var(--ev-admin-surface-2)!important;border-color:var(--ev-admin-border)!important}
+#institutionBranding button{background:linear-gradient(110deg,var(--ev-admin-accent),#a6e8d9)!important;color:#08201f!important}
+#stage6Tools.ev-admin-utilities{grid-area:utilities!important;margin:0!important;padding:17px 20px!important;border:1px solid var(--ev-admin-border)!important;border-radius:16px!important;background:var(--ev-admin-surface)!important}
+#stage6Tools.ev-admin-utilities>span{color:var(--ev-admin-text)!important;font-size:13px!important}
+#stage6Tools .ev-stage6-actions button{background:var(--ev-admin-surface-2)!important;border-color:var(--ev-admin-border)!important;color:var(--ev-admin-text)!important;animation:none!important}
+#orgAdminTools>.v21-control-panel{grid-area:reset!important;margin:0!important;padding:22px!important;border-radius:18px!important;background:var(--ev-admin-surface)!important;border-color:var(--ev-admin-border)!important}
+#orgAdminTools .v21-control-panel h3{color:var(--ev-admin-text)!important}
+#orgAdminTools .v21-control-panel p{color:var(--ev-admin-muted)!important}
+#orgAdminTools .v21-control-panel select{background:var(--ev-admin-surface-2)!important;color:var(--ev-admin-text)!important;border:1px solid var(--ev-admin-border)!important}
+#adminView{max-width:none!important;margin:18px 0!important;padding:24px!important;border-radius:18px!important;background:var(--ev-admin-surface)!important;border:1px solid var(--ev-admin-border)!important}
+#adminView h3{color:var(--ev-admin-text)!important}
+button.primary{background:linear-gradient(110deg,var(--ev-admin-accent),#b0eadf)!important;color:#08201f!important;animation:none!important}
+.mark{background:linear-gradient(135deg,var(--ev-admin-accent),var(--ev-admin-gold))!important;animation:none!important}
+@media(max-width:850px){#orgAdminTools{grid-template-columns:1fr!important;grid-template-areas:"welcome" "nav" "branding" "utilities" "reset"!important}#orgAdminTools>.grid{position:static;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}#orgAdminTools>.grid:before{grid-column:1/-1}}
+@media(max-width:520px){.wrap{width:94vw;margin:18px auto}#orgAdminTools>.grid{grid-template-columns:1fr!important}#orgAdminTools button.menu-card{min-height:68px!important}#institutionBranding{padding:17px!important}.topbar{gap:8px}.brand small{font-size:8px}.actions{gap:5px}}
